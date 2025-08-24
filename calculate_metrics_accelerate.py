@@ -70,11 +70,11 @@ def setup_models(device, args):
 
     # Task-dependent metrics
     speaker_sim_fn = SpeakerSimilarity().to(device) if args.task_dependent_metrics else None
-    wer_cer_fn = OWSMEvaluator(device=str(device)).to(device) if args.task_dependent_metrics else None
+    wer_cer_fn = OWSMEvaluator(device=device.type).to(device) if args.task_dependent_metrics else None
 
     # Task-independent metrics
     phoneme_similarity_fn = LevenshteinPhonemeSimilarity() if args.task_independent_metrics else None
-    speech_bert_score_fn = SpeechBERTScore(device) if args.task_independent_metrics else None
+    speech_bert_score_fn = SpeechBERTScore(device.type) if args.task_independent_metrics else None
 
     return {
     "Intrusive": {
@@ -109,6 +109,7 @@ def main(args):
     process_group_kwargs = InitProcessGroupKwargs(timeout=timedelta(seconds=36000))  # 10 hours
     accelerator = Accelerator(kwargs_handlers=[process_group_kwargs])
     device = accelerator.device
+    torch.set_default_device(device)
 
     models = setup_models(device, args)
 
