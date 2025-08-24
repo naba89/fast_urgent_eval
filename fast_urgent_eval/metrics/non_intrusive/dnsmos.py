@@ -29,6 +29,7 @@ class DNSMOSOVRL(nn.Module):
         ovr_poly = p_ovr(ovr)
         return ovr_poly
 
+    @torch.inference_mode()
     def forward(self, inf, fs, **kwargs):
         """
         audio: torch.Tensor, shape (B, T)
@@ -54,7 +55,7 @@ class DNSMOSOVRL(nn.Module):
             mos_ovr = self.get_polyfit_val(mos_ovr_raw)
             predicted_mos_ovr_seg.append(mos_ovr)
 
-        return torch.stack(predicted_mos_ovr_seg).mean()
+        return torch.stack(predicted_mos_ovr_seg).mean().item()
 
 
 if __name__ == '__main__':

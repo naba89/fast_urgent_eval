@@ -104,7 +104,7 @@ def setup_models(device, args):
     }
 
 
-
+@torch.inference_mode()
 def main(args):
     data_pairs = create_data_pairs(args.base_dir, args.ref_scp, args.inf_scp, args.ref_text, args.utt2lang)
 
