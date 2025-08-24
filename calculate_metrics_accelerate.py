@@ -195,8 +195,8 @@ def main(args):
                         ref_10k = torch.from_numpy(ref_10k).to(device)
                         inf_10k = torch.from_numpy(inf_10k).to(device)
                     else:
-                        ref_10k = torchaudio.functional.resample(ref, ref_sr, 10000)
-                        inf_10k = torchaudio.functional.resample(inf, inf_sr, 10000)
+                        ref_10k = torchaudio.functional.resample(ref, ref_sr, 10000, resampling_method="sinc_interp_kaiser")
+                        inf_10k = torchaudio.functional.resample(inf, inf_sr, 10000, resampling_method="sinc_interp_kaiser")
 
                     scores["STOI"] = models["Intrusive"]["STOI"](ref=ref_10k.squeeze(), inf=inf_10k.squeeze(),
                                                                  fs=10000, extended=True)
