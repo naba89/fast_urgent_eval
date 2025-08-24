@@ -159,11 +159,11 @@ def main(args):
                     # end_time = time.time()
                     # print(f"LSD computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Intrusive"]["MCD"] is not None:
-                    # start_time = time.time()
+                    start_time = time.time()
                     # requires numpy at original sampling rate
                     scores["MCD"] = models["Intrusive"]["MCD"](ref_np.squeeze(), inf_np.squeeze(), ref_sr)
-                    # end_time = time.time()
-                    # print(f"MCD computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
+                    end_time = time.time()
+                    print(f"MCD computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Intrusive"]["PESQ"] is not None:
                     # start_time = time.time()
                     # needs either 8k or 16k
