@@ -179,14 +179,19 @@ def main(args):
                     print(f"SDR computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Intrusive"]["STOI"] is not None:
                     start_time = time.time()
-                    # needs 10k, so resample to 10khz using pystoi resample_oct
-                    ref_10k = ref_np.squeeze()
-                    inf_10k = inf_np.squeeze()
-                    if ref_sr != 10000:  # for STOI
-                        ref_10k = resample_oct(ref_np, 10000, ref_sr)
-                        inf_10k = resample_oct(inf_np, 10000, inf_sr)
-                    ref_10k = torch.from_numpy(ref_10k).to(device)
-                    inf_10k = torch.from_numpy(inf_10k).to(device)
+                    # needs 10k, so resample to 10khz using either torchaudio or pystoi
+                    if args.resample_oct:
+                        ref_10k = ref_np.squeeze()
+                        inf_10k = inf_np.squeeze()
+                        if ref_sr != 10000:  # for STOI
+                            ref_10k = resample_oct(ref_np, 10000, ref_sr)
+                            inf_10k = resample_oct(inf_np, 10000, inf_sr)
+                        ref_10k = torch.from_numpy(ref_10k).to(device)
+                        inf_10k = torch.from_numpy(inf_10k).to(device)
+                    else:
+                        ref_10k = torchaudio.functional.resample(ref, ref_sr, 10000)
+                        inf_10k = torchaudio.functional.resample(inf, inf_sr, 10000)
+                        
                     scores["STOI"] = models["Intrusive"]["STOI"](ref=ref_10k, inf=inf_10k, fs=10000, extended=True)
                     end_time = time.time()
                     print(f"STOI computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
@@ -245,6 +250,7 @@ if __name__ == '__main__':
     parser.add_argument("--task_dependent_metrics", action="store_false", default=True)
     parser.add_argument("--task_independent_metrics", action="store_false", default=True)
     parser.add_argument("--mcd", action="store_false", default=True, help="Compute MCD, which is slow and requires numpy arrays")
+    parser.add_argument("--resample_oct", action="store_true", default=False, help="Use pystoi resample_oct for STOI computation, which is slow but original")
     args = parser.parse_args()
 
     main(args)
