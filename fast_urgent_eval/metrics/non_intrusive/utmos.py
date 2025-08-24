@@ -23,6 +23,7 @@ class UTMOS(nn.Module):
                 # no weight norm to remove
                 pass
 
+    @torch.inference_mode()
     def forward(self, inf, sr, **kwargs):
         """wave-to-score :: (B, T) -> (B, F) """
 
@@ -54,4 +55,4 @@ class UTMOS(nn.Module):
         # Utterance-scale score :: (B, Frame, Feat=1) -> (B, Feat=1) -> (B,) - Time averaging
         utter_score = score_series.mean(dim=1).squeeze(1) * 2 + 3
 
-        return utter_score
+        return utter_score.item()

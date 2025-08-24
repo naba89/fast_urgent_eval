@@ -172,6 +172,7 @@ class Scoreq(nn.Module):
         else:
             return self.predict_tensor(inf, fs, ref, fs)
 
+    @torch.inference_mode()
     def predict_tensor(self, test_wave, test_sr, ref_wave=None, ref_sr=None):
         """Makes predictions on audio tensors."""
         test_wave_padded = self.preprocess_tensor(test_wave, test_sr)

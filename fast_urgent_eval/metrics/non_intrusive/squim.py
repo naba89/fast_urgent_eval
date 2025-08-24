@@ -25,4 +25,4 @@ class SQUIMMetrics(nn.Module):
     def forward(self, inf, sr, **kwargs):
         inf = torchaudio.functional.resample(inf, sr, self.sample_rate)
         stoi_hyp, pesq_hyp, si_sdr_hyp = self.objective_model(inf)
-        return stoi_hyp, pesq_hyp, si_sdr_hyp
+        return stoi_hyp.item(), pesq_hyp.item(), si_sdr_hyp.item()

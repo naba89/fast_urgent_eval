@@ -1109,6 +1109,7 @@ class NISQA_DIM_MOS(nn.Module):
         for param in self.model.parameters():
             param.requires_grad = False
 
+    @torch.inference_mode()
     def forward(self, inf, fs, **kwargs):
         """
         x: (batch_size, n_samples)
@@ -1118,7 +1119,7 @@ class NISQA_DIM_MOS(nn.Module):
         mel_spec = self.amp_to_db(mel_spec)
         spec_seg, wins, wins_cpu = segment_specs3(x=mel_spec, seg_length=self.seg_length, seg_hop=self.seg_hop_length)
         nisqa_mos = self.model(spec_seg, wins, wins_cpu)[:, 0]
-        return nisqa_mos
+        return nisqa_mos.item()
 
 
 if __name__ == '__main__':
