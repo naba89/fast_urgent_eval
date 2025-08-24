@@ -147,7 +147,7 @@ def main(args):
             # Intrusive metrics
             if args.intrusive_metrics:
                 if models["Intrusive"]["LSD"] is not None:
-                    scores["LSD"] = models["Intrusive"]["LSD"](ref, inf, ref_sr).item()
+                    scores["LSD"] = models["Intrusive"]["LSD"](ref, inf, ref_sr)
                 if models["Intrusive"]["MCD"] is not None:
                     # requires numpy at original sampling rate
                     scores["MCD"] = models["Intrusive"]["MCD"](ref_np.squeeze(), inf_np.squeeze(), ref_sr)
@@ -163,7 +163,7 @@ def main(args):
                         sr_pesq = 16000
                     scores["PESQ"] = models["Intrusive"]["PESQ"](ref_pesq.squeeze(), inf_pesq.squeeze(), sr_pesq)
                 if models["Intrusive"]["SDR"] is not None:
-                    scores["SDR"] = models["Intrusive"]["SDR"](ref, inf).item()
+                    scores["SDR"] = models["Intrusive"]["SDR"](ref, inf)
                 if models["Intrusive"]["STOI"] is not None:
                     # needs 10k, so resample to 10khz using pystoi resample_oct
                     ref_10k = ref_np
@@ -173,25 +173,25 @@ def main(args):
                         inf_10k = resample_oct(inf_np, 10000, inf_sr)
                     ref_10k = torch.from_numpy(ref_10k).to(device)
                     inf_10k = torch.from_numpy(inf_10k).to(device)
-                    scores["STOI"] = models["Intrusive"]["STOI"](ref=ref_10k, inf=inf_10k).item()
+                    scores["STOI"] = models["Intrusive"]["STOI"](ref=ref_10k, inf=inf_10k)
 
             # Non-intrusive metrics
             if args.non_intrusive_metrics:
                 if models["Non-Intrusive"]["DNSMOS"] is not None:
-                    scores["DNSMOS"] = models["Non-Intrusive"]["DNSMOS"](inf=inf_16k, fs=16000).item()
+                    scores["DNSMOS"] = models["Non-Intrusive"]["DNSMOS"](inf=inf_16k, fs=16000)
                 if models["Non-Intrusive"]["NISQA"] is not None:
-                    scores["NISQA"] = models["Non-Intrusive"]["NISQA"](inf=inf, fs=inf_sr).item()
+                    scores["NISQA"] = models["Non-Intrusive"]["NISQA"](inf=inf, fs=inf_sr)
                 if models["Non-Intrusive"]["Scoreq"] is not None:
-                    scores["Scoreq"] = models["Non-Intrusive"]["Scoreq"](ref=ref_16k, inf=inf_16k, fs=16000).item()
+                    scores["Scoreq"] = models["Non-Intrusive"]["Scoreq"](ref=ref_16k, inf=inf_16k, fs=16000)
                 if models["Non-Intrusive"]["UTMOS"] is not None:
-                    scores["UTMOS"] = models["Non-Intrusive"]["UTMOS"](inf=inf_16k, fs=16000).item()
+                    scores["UTMOS"] = models["Non-Intrusive"]["UTMOS"](inf=inf_16k, fs=16000)
                 if models["Non-Intrusive"]["SQUIM"] is not None:
-                    scores["SQUIM"] = models["Non-Intrusive"]["SQUIM"](inf_16k, 16000).item()
+                    scores["SQUIM"] = models["Non-Intrusive"]["SQUIM"](inf_16k, 16000)
 
             # Task-dependent metrics
             if args.task_dependent_metrics:
                 if models["Task-Dependent"]["SpeakerSimilarity"] is not None:
-                    scores["SpeakerSimilarity"] = models["Task-Dependent"]["SpeakerSimilarity"](ref=ref_16k, inf=inf_16k, fs=16000).item()
+                    scores["SpeakerSimilarity"] = models["Task-Dependent"]["SpeakerSimilarity"](ref=ref_16k, inf=inf_16k, fs=16000)
                 if models["Task-Dependent"]["WER_CER"] is not None:
                     scores["WER_CER"] = models["Task-Dependent"]["WER_CER"](audio=inf_16k, ref_text=ref_txt,
                                                                    sr=16000, lang_id=lang_id, uid=uid)
@@ -201,7 +201,7 @@ def main(args):
                 if models["Task-Independent"]["PhonemeSimilarity"] is not None:
                     scores["PhonemeSimilarity"] = models["Task-Independent"]["PhonemeSimilarity"](ref_16k.squeeze(), inf_16k.squeeze(), 16000)
                 if models["Task-Independent"]["SpeechBERTScore"] is not None:
-                    scores["SpeechBERTScore"] = models["Task-Independent"]["SpeechBERTScore"](ref_16k, inf_16k, 16000).item()
+                    scores["SpeechBERTScore"] = models["Task-Independent"]["SpeechBERTScore"](ref_16k, inf_16k, 16000)
 
             print(f"UID: {uid}, Scores: {scores}", flush=True)
 
