@@ -1,4 +1,5 @@
 import argparse
+import os.path
 from datetime import timedelta
 
 import torch
@@ -23,7 +24,7 @@ from fast_urgent_eval.metrics.task_independent.phoneme_similarity import Levensh
 from fast_urgent_eval.metrics.task_independent.speech_bert_score import SpeechBERTScore
 
 
-def create_data_pairs(ref_scp, inf_scp, ref_text, utt2lang):
+def create_data_pairs(base_dir, ref_scp, inf_scp, ref_text, utt2lang):
     refs = {}
     transcripts = {}
     language_id = {}
@@ -31,7 +32,7 @@ def create_data_pairs(ref_scp, inf_scp, ref_text, utt2lang):
     with open(ref_scp, "r") as f:
         for line in f:
             uid, audio_path = line.strip().split()
-            refs[uid] = audio_path
+            refs[uid] = os.path.join(base_dir, audio_path)
 
     with open(ref_text, "r") as f:
         for line in f:
@@ -104,7 +105,7 @@ def setup_models(device, args):
 
 
 def main(args):
-    data_pairs = create_data_pairs(args.ref_scp, args.inf_scp, args.ref_text, args.utt2lang)
+    data_pairs = create_data_pairs(args.base_dir, args.ref_scp, args.inf_scp, args.ref_text, args.utt2lang)
 
     process_group_kwargs = InitProcessGroupKwargs(timeout=timedelta(seconds=36000))  # 10 hours
     accelerator = Accelerator(kwargs_handlers=[process_group_kwargs])
@@ -209,6 +210,8 @@ def main(args):
 if __name__ == '__main__':
     torch.set_float32_matmul_precision("high")
     parser = argparse.ArgumentParser()
+    parser.add_argument("--base_dir", type=str,
+                        default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/")
     parser.add_argument("--ref_scp", type=str,
                         default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/data/nonblind/spk1.scp",
                         )
