@@ -70,7 +70,7 @@ def setup_models(device, args):
 
     # Task-dependent metrics
     speaker_sim_fn = SpeakerSimilarity().to(device) if args.task_dependent_metrics else None
-    wer_cer_fn = OWSMEvaluator(device).to(device) if args.task_dependent_metrics else None
+    wer_cer_fn = OWSMEvaluator(device=str(device)).to(device) if args.task_dependent_metrics else None
 
     # Task-independent metrics
     phoneme_similarity_fn = LevenshteinPhonemeSimilarity() if args.task_independent_metrics else None
