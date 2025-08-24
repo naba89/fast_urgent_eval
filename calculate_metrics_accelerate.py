@@ -1,5 +1,6 @@
 import argparse
 import os.path
+import time
 from datetime import timedelta
 
 import torch
@@ -147,11 +148,18 @@ def main(args):
             # Intrusive metrics
             if args.intrusive_metrics:
                 if models["Intrusive"]["LSD"] is not None:
+                    start_time = time.time()
                     scores["LSD"] = models["Intrusive"]["LSD"](ref, inf, ref_sr)
+                    end_time = time.time()
+                    print(f"LSD computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Intrusive"]["MCD"] is not None:
+                    start_time = time.time()
                     # requires numpy at original sampling rate
                     scores["MCD"] = models["Intrusive"]["MCD"](ref_np.squeeze(), inf_np.squeeze(), ref_sr)
+                    end_time = time.time()
+                    print(f"MCD computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Intrusive"]["PESQ"] is not None:
+                    start_time = time.time()
                     # needs either 8k or 16k
                     if ref_sr == 8000:
                         ref_pesq = ref_np
@@ -162,9 +170,15 @@ def main(args):
                         inf_pesq = inf_16k.cpu().numpy()
                         sr_pesq = 16000
                     scores["PESQ"] = models["Intrusive"]["PESQ"](ref_pesq.squeeze(), inf_pesq.squeeze(), sr_pesq)
+                    end_time = time.time()
+                    print(f"PESQ computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Intrusive"]["SDR"] is not None:
+                    start_time = time.time()
                     scores["SDR"] = models["Intrusive"]["SDR"](ref, inf)
+                    end_time = time.time()
+                    print(f"SDR computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Intrusive"]["STOI"] is not None:
+                    start_time = time.time()
                     # needs 10k, so resample to 10khz using pystoi resample_oct
                     ref_10k = ref_np.squeeze()
                     inf_10k = inf_np.squeeze()
@@ -174,6 +188,8 @@ def main(args):
                     ref_10k = torch.from_numpy(ref_10k).to(device)
                     inf_10k = torch.from_numpy(inf_10k).to(device)
                     scores["STOI"] = models["Intrusive"]["STOI"](ref=ref_10k, inf=inf_10k, fs=10000, extended=True)
+                    end_time = time.time()
+                    print(f"STOI computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
 
             # Non-intrusive metrics
             if args.non_intrusive_metrics:
