@@ -1021,7 +1021,7 @@ NISQA_MODEL_PATH = os.path.join(this_dir, 'nisqa_models', 'nisqa.tar')
 class NISQA_DIM_MOS(nn.Module):
     def __init__(self):
         super().__init__()
-        ckpt = torch.load(NISQA_MODEL_PATH, map_location='cpu')
+        ckpt = torch.load(NISQA_MODEL_PATH, map_location='cpu', weights_only=False)
         args = ckpt['args']
         args["dim"] = True
         args["csv_mos_train"] = None  # column names hardcoded for dim models
