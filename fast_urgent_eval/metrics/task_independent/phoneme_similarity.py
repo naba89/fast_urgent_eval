@@ -31,7 +31,7 @@ class PhonemePredictor(Module):
         if waveform.ndim == 1:
             waveform = waveform.unsqueeze(0)
         if self.do_normalize:
-            waveform = F.layer_norm(waveform, waveform.shape[-1], eps=1e-12)
+            waveform = F.layer_norm(waveform, waveform.shape[-1:], eps=1e-12)
 
         # retrieve logits
         logits = self.model(waveform).logits
