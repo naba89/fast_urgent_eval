@@ -1,3 +1,8 @@
+import logging
+
+# Disable all logging messages at or below INFO level
+logging.disable(logging.INFO)
+
 import argparse
 import os.path
 import time
@@ -252,7 +257,7 @@ def main(args):
                     # end_time = time.time()
                     # print(f"SpeechBERTScore computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
 
-            print(f"UID: {uid}, Scores: {scores}", flush=True)
+            # print(f"UID: {uid}, Scores: {scores}", flush=True)
 
 
 
