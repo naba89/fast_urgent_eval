@@ -211,7 +211,6 @@ class STOI(torch.nn.Module):
         self.beta_db = beta_db
         self.dyn_range_db = dyn_range_db
         self.dtype = dtype
-        self.device = device
 
         obm, cf = thirdoct_torch(fs_internal, nfft, numband, minfreq, dtype=dtype, device=device)
         # Register as buffers for device/dtype tracking
@@ -225,6 +224,7 @@ class STOI(torch.nn.Module):
         fs_sig: original sampling rate of x,y
         Returns: scalar STOI score
         """
+        device = ref.device
         assert fs == self.fs_internal, f"Expected fs_sig={self.fs_internal}, got {fs}"
         assert ref.ndim == 1 and inf.ndim == 1, f"Expected 1-D tensors, got {ref.ndim}D and {inf.ndim}D"
 
@@ -233,11 +233,11 @@ class STOI(torch.nn.Module):
 
         # Remove silent frames
         x_sil, y_sil = remove_silent_frames_torch(ref, inf, self.dyn_range_db, self.n_frame, self.n_frame // 2,
-                                                  dtype=self.dtype, device=self.device)
+                                                  dtype=self.dtype, device=device)
 
         # STFT (overlap=2 in your code)
-        X = stft_torch(x_sil, self.n_frame, self.nfft, overlap=2, dtype=self.dtype, device=self.device)  # (F, T)
-        Y = stft_torch(y_sil, self.n_frame, self.nfft, overlap=2, dtype=self.dtype, device=self.device)
+        X = stft_torch(x_sil, self.n_frame, self.nfft, overlap=2, dtype=self.dtype, device=device)  # (F, T)
+        Y = stft_torch(y_sil, self.n_frame, self.nfft, overlap=2, dtype=self.dtype, device=device)
 
         if X.shape[-1] < self.n_ctx_frames:
             # Same warning behavior as your code (but here we return tensor)
@@ -255,8 +255,8 @@ class STOI(torch.nn.Module):
         Y_segs = torch.stack([Y_tob[:, m - self.n_ctx_frames:m] for m in range(self.n_ctx_frames, T + 1)], dim=0)
 
         if extended:
-            Xn = row_col_normalize_torch(X_segs, dtype=self.dtype, device=self.device)
-            Yn = row_col_normalize_torch(Y_segs, dtype=self.dtype, device=self.device)
+            Xn = row_col_normalize_torch(X_segs, dtype=self.dtype, device=device)
+            Yn = row_col_normalize_torch(Y_segs, dtype=self.dtype, device=device)
             # sum(Xn * Yn / N) / bands
             d = torch.sum(Xn * Yn / self.n_ctx_frames) / Xn.shape[0]
             return d

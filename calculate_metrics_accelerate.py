@@ -173,7 +173,7 @@ def main(args):
                         inf_10k = resample_oct(inf_np, 10000, inf_sr)
                     ref_10k = torch.from_numpy(ref_10k).to(device)
                     inf_10k = torch.from_numpy(inf_10k).to(device)
-                    scores["STOI"] = models["Intrusive"]["STOI"](ref=ref_10k, inf=inf_10k)
+                    scores["STOI"] = models["Intrusive"]["STOI"](ref=ref_10k, inf=inf_10k, fs=10000, extended=True)
 
             # Non-intrusive metrics
             if args.non_intrusive_metrics:
