@@ -191,8 +191,9 @@ def main(args):
                     else:
                         ref_10k = torchaudio.functional.resample(ref, ref_sr, 10000)
                         inf_10k = torchaudio.functional.resample(inf, inf_sr, 10000)
-                        
-                    scores["STOI"] = models["Intrusive"]["STOI"](ref=ref_10k, inf=inf_10k, fs=10000, extended=True)
+
+                    scores["STOI"] = models["Intrusive"]["STOI"](ref=ref_10k.squeeze(), inf=inf_10k.squeeze(),
+                                                                 fs=10000, extended=True)
                     end_time = time.time()
                     print(f"STOI computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
 
