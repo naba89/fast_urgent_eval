@@ -15,9 +15,8 @@ espnet==202412
 # for calculating intrusive SE metrics
 fastdtw
 fast_bss_eval
-# pysptk
+pysptk
 pystoi
-diffsptk
 
 # for calculating the DNSMOS metric
 onnx2torch
