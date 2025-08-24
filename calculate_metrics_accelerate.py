@@ -178,7 +178,7 @@ def main(args):
                     # end_time = time.time()
                     # print(f"SDR computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Intrusive"]["STOI"] is not None:
-                    # start_time = time.time()
+                    start_time = time.time()
                     # needs 10k, so resample to 10khz using either torchaudio or pystoi
                     if args.resample_oct:
                         ref_10k = ref_np.squeeze()
@@ -194,50 +194,50 @@ def main(args):
 
                     scores["STOI"] = models["Intrusive"]["STOI"](ref=ref_10k.squeeze(), inf=inf_10k.squeeze(),
                                                                  fs=10000, extended=True)
-                    # end_time = time.time()
-                    # print(f"STOI computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
+                    end_time = time.time()
+                    print(f"STOI computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
 
             # Non-intrusive metrics
             if args.non_intrusive_metrics:
                 if models["Non-Intrusive"]["DNSMOS"] is not None:
-                    start_time = time.time()
+                    # start_time = time.time()
                     scores["DNSMOS"] = models["Non-Intrusive"]["DNSMOS"](inf=inf_16k, fs=16000)
-                    end_time = time.time()
-                    print(f"DNSMOS computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
+                    # end_time = time.time()
+                    # print(f"DNSMOS computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Non-Intrusive"]["NISQA"] is not None:
-                    start_time = time.time()
+                    # start_time = time.time()
                     scores["NISQA"] = models["Non-Intrusive"]["NISQA"](inf=inf, fs=inf_sr)
-                    end_time = time.time()
-                    print(f"NISQA computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
+                    # end_time = time.time()
+                    # print(f"NISQA computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Non-Intrusive"]["Scoreq"] is not None:
-                    start_time = time.time()
+                    # start_time = time.time()
                     scores["Scoreq"] = models["Non-Intrusive"]["Scoreq"](ref=ref_16k, inf=inf_16k, fs=16000)
-                    end_time = time.time()
-                    print(f"Scoreq computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
+                    # end_time = time.time()
+                    # print(f"Scoreq computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Non-Intrusive"]["UTMOS"] is not None:
-                    start_time = time.time()
+                    # start_time = time.time()
                     scores["UTMOS"] = models["Non-Intrusive"]["UTMOS"](inf=inf_16k, sr=16000)
-                    end_time = time.time()
-                    print(f"UTMOS computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
+                    # end_time = time.time()
+                    # print(f"UTMOS computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Non-Intrusive"]["SQUIM"] is not None:
-                    start_time = time.time()
+                    # start_time = time.time()
                     scores["SQUIM"] = models["Non-Intrusive"]["SQUIM"](inf_16k, 16000)
-                    end_time = time.time()
-                    print(f"SQUIM computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
+                    # end_time = time.time()
+                    # print(f"SQUIM computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
 
             # Task-dependent metrics
             if args.task_dependent_metrics:
                 if models["Task-Dependent"]["SpeakerSimilarity"] is not None:
-                    start_time = time.time()
+                    # start_time = time.time()
                     scores["SpeakerSimilarity"] = models["Task-Dependent"]["SpeakerSimilarity"](ref=ref_16k, inf=inf_16k, fs=16000)
-                    end_time = time.time()
-                    print(f"SpeakerSimilarity computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
+                    # end_time = time.time()
+                    # print(f"SpeakerSimilarity computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Task-Dependent"]["WER_CER"] is not None:
-                    start_time = time.time()
+                    # start_time = time.time()
                     scores["WER_CER"] = models["Task-Dependent"]["WER_CER"](audio=inf_16k, ref_text=ref_txt,
                                                                    sr=16000, lang_id=lang_id, uid=uid)
-                    end_time = time.time()
-                    print(f"WER_CER computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
+                    # end_time = time.time()
+                    # print(f"WER_CER computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
 
             # Task-independent metrics
             if args.task_independent_metrics:
