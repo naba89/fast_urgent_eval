@@ -75,7 +75,7 @@ def setup_models(device, args):
     wer_cer_fn = OWSMEvaluator(device=device.type).to(device) if args.task_dependent_metrics else None
 
     # Task-independent metrics
-    phoneme_similarity_fn = LevenshteinPhonemeSimilarity() if args.task_independent_metrics else None
+    phoneme_similarity_fn = LevenshteinPhonemeSimilarity(device) if args.task_independent_metrics else None
     speech_bert_score_fn = SpeechBERTScore(device.type) if args.task_independent_metrics else None
 
     return {

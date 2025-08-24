@@ -52,8 +52,8 @@ class LevenshteinPhonemeSimilarity:
         https://ieeexplore.ieee.org/document/10363040
     """
 
-    def __init__(self):
-        self.phoneme_predictor = PhonemePredictor()
+    def __init__(self, device):
+        self.phoneme_predictor = PhonemePredictor().to(device)
 
     def __call__(self, ref: torch.Tensor, inf: torch.Tensor, sr: int) -> float:
         ref = torchaudio.functional.resample(ref, orig_freq=sr, new_freq=TARGET_FS).squeeze()
