@@ -24,7 +24,7 @@ class PhonemePredictor(Module):
         # https://huggingface.co/facebook/wav2vec2-lv-60-espeak-cv-ft
         super().__init__()
         self.processor = Wav2Vec2Processor.from_pretrained(checkpoint)
-        self.do_normalize = self.processor.do_normalize
+        self.do_normalize = self.processor.feature_extractor.do_normalize
         self.model = Wav2Vec2ForCTC.from_pretrained(checkpoint)
 
     def forward(self, waveform):
