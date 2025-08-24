@@ -5,7 +5,7 @@
 # ported from https://github.com/espnet/espnet/blob/master/utils/mcd_calculate.py
 
 """Evaluate MCD between generated and groundtruth audios with SPTK-based mcep."""
-
+import time
 from typing import Tuple
 
 import numpy as np
@@ -100,6 +100,7 @@ def calculate(
     """Calculate MCD."""
 
     # extract ground truth and converted features
+    start_time= time.time()
     gen_mcep = sptk_extract(
         x=inf_audio,
         fs=fs,
@@ -116,9 +117,13 @@ def calculate(
         mcep_dim=mcep_dim,
         mcep_alpha=mcep_alpha,
     )
+    print("SPTK feature extraction time:", time.time() - start_time)
+    start_time = time.time()
 
     # DTW
     _, path = fastdtw(gen_mcep, gt_mcep, dist=spatial.distance.euclidean)
+    print("DTW time:", time.time() - start_time)
+    start_time = time.time()
     twf = np.array(path).T
     gen_mcep_dtw = gen_mcep[twf[0]]
     gt_mcep_dtw = gt_mcep[twf[1]]
@@ -126,6 +131,7 @@ def calculate(
     # MCD
     diff2sum = np.sum((gen_mcep_dtw - gt_mcep_dtw) ** 2, 1)
     mcd = np.mean(10.0 / np.log(10.0) * np.sqrt(2 * diff2sum), 0)
+    print("MCD calculation time:", time.time() - start_time)
 
     return mcd
 
