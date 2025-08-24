@@ -166,8 +166,8 @@ def main(args):
                     scores["SDR"] = models["Intrusive"]["SDR"](ref, inf)
                 if models["Intrusive"]["STOI"] is not None:
                     # needs 10k, so resample to 10khz using pystoi resample_oct
-                    ref_10k = ref_np
-                    inf_10k = inf_np
+                    ref_10k = ref_np.squeeze()
+                    inf_10k = inf_np.squeeze()
                     if ref_sr != 10000:  # for STOI
                         ref_10k = resample_oct(ref_np, 10000, ref_sr)
                         inf_10k = resample_oct(inf_np, 10000, inf_sr)
