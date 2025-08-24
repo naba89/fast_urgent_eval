@@ -174,9 +174,6 @@ class Scoreq(nn.Module):
 
     def predict_tensor(self, test_wave, test_sr, ref_wave=None, ref_sr=None):
         """Makes predictions on audio tensors."""
-
-        if self.use_onnx:
-            raise ValueError("ONNX mode does not support tensor inputs directly. Use file paths instead.")
         test_wave_padded = self.preprocess_tensor(test_wave, test_sr)
 
         with torch.no_grad():
