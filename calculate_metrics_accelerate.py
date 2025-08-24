@@ -212,7 +212,7 @@ if __name__ == '__main__':
                         default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/data/nonblind/spk1.scp",
                         )
     parser.add_argument("--inf_scp", type=str,
-                        default="/data/umiushi0/users/nabarun/projects/urgent2025/fast_urgent_eval/fast_urgent_eval/metrics/calculate_metrics_accelerate.py",
+                        default="/home/mil/nabarun/github/urgent2026/exp/results/nonblind/scnet_transformer_ssl_v3/enh.scp",
                         )
     parser.add_argument("--ref_text", type=str,
                         default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/data/nonblind/text",
@@ -220,11 +220,11 @@ if __name__ == '__main__':
     parser.add_argument("--utt2lang", type=str,
                         default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/data/nonblind/utt2lang",
                         )
-    parser.add_argument("--intrusive_metrics", action="store_true", default=False)
-    parser.add_argument("--non_intrusive_metrics", action="store_true", default=False)
-    parser.add_argument("--task_dependent_metrics", action="store_true", default=False)
-    parser.add_argument("--task_independent_metrics", action="store_true", default=False)
-    parser.add_argument("--mcd", action="store_true", default=False, help="Compute MCD, which is slow and requires numpy arrays")
+    parser.add_argument("--intrusive_metrics", action="store_false", default=True)
+    parser.add_argument("--non_intrusive_metrics", action="store_false", default=True)
+    parser.add_argument("--task_dependent_metrics", action="store_false", default=True)
+    parser.add_argument("--task_independent_metrics", action="store_false", default=True)
+    parser.add_argument("--mcd", action="store_false", default=True, help="Compute MCD, which is slow and requires numpy arrays")
     args = parser.parse_args()
 
     main(args)
