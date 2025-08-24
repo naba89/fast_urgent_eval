@@ -242,15 +242,15 @@ def main(args):
             # Task-independent metrics
             if args.task_independent_metrics:
                 if models["Task-Independent"]["PhonemeSimilarity"] is not None:
-                    start_time = time.time()
+                    # start_time = time.time()
                     scores["PhonemeSimilarity"] = models["Task-Independent"]["PhonemeSimilarity"](ref_16k.squeeze(), inf_16k.squeeze(), 16000)
-                    end_time = time.time()
-                    print(f"PhonemeSimilarity computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
+                    # end_time = time.time()
+                    # print(f"PhonemeSimilarity computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Task-Independent"]["SpeechBERTScore"] is not None:
-                    start_time = time.time()
+                    # start_time = time.time()
                     scores["SpeechBERTScore"] = models["Task-Independent"]["SpeechBERTScore"](ref_16k, inf_16k, 16000)
-                    end_time = time.time()
-                    print(f"SpeechBERTScore computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
+                    # end_time = time.time()
+                    # print(f"SpeechBERTScore computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
 
             print(f"UID: {uid}, Scores: {scores}", flush=True)
 
