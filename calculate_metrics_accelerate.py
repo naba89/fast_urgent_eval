@@ -216,7 +216,7 @@ def main(args):
                     print(f"Scoreq computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Non-Intrusive"]["UTMOS"] is not None:
                     start_time = time.time()
-                    scores["UTMOS"] = models["Non-Intrusive"]["UTMOS"](inf=inf_16k, fs=16000)
+                    scores["UTMOS"] = models["Non-Intrusive"]["UTMOS"](inf=inf_16k, sr=16000)
                     end_time = time.time()
                     print(f"UTMOS computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Non-Intrusive"]["SQUIM"] is not None:
