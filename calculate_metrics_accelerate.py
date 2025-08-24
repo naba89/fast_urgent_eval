@@ -117,6 +117,7 @@ def main(args):
     accelerator = Accelerator(kwargs_handlers=[process_group_kwargs])
     device = accelerator.device
     torch.set_default_device(device)
+    print("Using device:", device, flush=True)
 
     models = setup_models(device, args)
 
@@ -142,9 +143,9 @@ def main(args):
             ref = ref.to(device)
             inf = inf.to(device)
 
-            if ref_sr != 16000:  # resample once, since 16khz is needed by many metrics
-                ref_16k = torchaudio.functional.resample(ref, ref_sr, 16000)
-                inf_16k = torchaudio.functional.resample(inf, inf_sr, 16000)
+            # resample once, since 16khz is needed by many metrics
+            ref_16k = torchaudio.functional.resample(ref, ref_sr, 16000)
+            inf_16k = torchaudio.functional.resample(inf, inf_sr, 16000)
 
 
             # Run the metrics manually, since different metrics might need different arguments
