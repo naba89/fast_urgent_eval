@@ -233,8 +233,8 @@ def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, u
             inf_pesq = inf_np
             sr_pesq = 8000
         else:
-            ref_pesq = ref_16k.cpu().numpy()
-            inf_pesq = inf_16k.cpu().numpy()
+            ref_pesq = ref_16k_np
+            inf_pesq = inf_16k_np
             sr_pesq = 16000
 
         scores["Intrusive"]["PESQ"] = metrics["PESQ"](ref_pesq.squeeze(), inf_pesq.squeeze(), sr_pesq)
