@@ -2,6 +2,7 @@ name: fast_urgent_eval
 
 dependencies:
   - python=3.10
+  - pip==24.0
   - conda-forge::ffmpeg<7
   - pip:
       - pip==24.0
