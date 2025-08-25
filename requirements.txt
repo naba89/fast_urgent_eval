@@ -1,7 +1,7 @@
 pip==24.0
 --extra-index-url https://download.pytorch.org/whl/cu121
-torch==2.5.1
-torchaudio==2.5.1
+torch==2.5.1+cu121
+torchaudio==2.5.1+cu121
 espnet_model_zoo
 librosa
 numpy<2
