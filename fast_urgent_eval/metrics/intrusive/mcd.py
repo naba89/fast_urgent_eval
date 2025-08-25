@@ -8,10 +8,13 @@
 import time
 from typing import Tuple
 
+import diffsptk
 import numpy as np
 import pysptk
+import torch
 from fastdtw import fastdtw
 from scipy import spatial
+from torch import nn
 
 
 def sptk_extract(
@@ -136,32 +139,97 @@ def calculate(
     return mcd
 
 
-class MCDMetric:
+class MCDMetric(nn.Module):
     """Mel Cepstral Distortion (MCD) metric module."""
 
-    def __init__(self, n_fft=1024, n_shift=256, mcep_dim=None, mcep_alpha=None):
+    def __init__(self, n_fft=1024, n_shift=256):
+        super().__init__()
         self.n_fft = n_fft
         self.n_shift = n_shift
-        self.mcep_dim = mcep_dim
-        self.mcep_alpha = mcep_alpha
 
-    def __call__(self, ref: np.ndarray, inf: np.ndarray, fs: int, **kwargs) -> float:
+        self.stft = diffsptk.STFT(
+            frame_length=n_fft,
+            frame_period=n_shift,
+            fft_length=n_fft,
+            window="hamming",
+            center=False,
+            eps=1e-6,
+            dtype=torch.float64,  # Use float64 for precision
+        )
+        self.valid_sr = [8000, 16000, 22050, 24000, 32000, 44100, 48000]
+        self.mcep_fncs = nn.ModuleDict()
+        for fs in self.valid_sr:
+            mcep_dim, mcep_alpha = _get_best_mcep_params(fs)
+            self.mcep_fncs[str(fs)] = diffsptk.MelCepstralAnalysis(
+                cep_order=mcep_dim,
+                fft_length=n_fft,
+                alpha=mcep_alpha,
+                n_iter=6,  # gives closer results atol around 1e-4
+                dtype=torch.float64,  # Use float64 for precision
+            )
+
+    @torch.inference_mode()
+    def forward(self, ref: torch.Tensor, inf: torch.Tensor, fs: int, **kwargs) -> float:
         """Calculate Mel Cepstral Distortion (MCD).
 
         Args:
-            ref (np.ndarray): reference signal (time,)
-            inf (np.ndarray): enhanced signal (time,)
+            ref (torch.Tensor): reference signal (time,)
+            inf (torch.Tensor): enhanced signal (time,)
             fs (int): sampling rate in Hz
 
         Returns:
             mcd (float): MCD value between [0, +inf)
         """
-        return calculate(
-            inf_audio=inf,
-            ref_audio=ref,
-            fs=fs,
-            n_fft=self.n_fft,
-            n_shift=self.n_shift,
-            mcep_dim=self.mcep_dim,
-            mcep_alpha=self.mcep_alpha,
-        )
+        if fs not in self.valid_sr:
+            raise ValueError(f"fs must be one of {self.valid_sr}.")
+        if ref.ndim != 1 or inf.ndim != 1:
+            raise ValueError("ref and inf must be 1D array.")
+        if len(ref) < self.n_fft or len(inf) < self.n_fft:
+            raise ValueError(f"ref and inf length must be larger than {self.n_fft}.")
+
+        # extract features
+        ref = ref.double()
+        inf = inf.double()
+        start_time= time.time()
+        gen_mcep = self.mcep_fncs[str(fs)](self.stft(inf)).cpu().numpy()
+        gt_mcep = self.mcep_fncs[str(fs)](self.stft(ref)).cpu().numpy()
+        print("DiffSPTK feature extraction time:", time.time() - start_time)
+        start_time = time.time()
+        # DTW
+        _, path = fastdtw(gen_mcep, gt_mcep, dist=spatial.distance.euclidean)
+        print("DTW time:", time.time() - start_time)
+        start_time = time.time()
+        twf = np.array(path).T
+        gen_mcep_dtw = gen_mcep[twf[0]]
+        gt_mcep_dtw = gt_mcep[twf[1]]
+
+        # MCD
+        diff2sum = np.sum((gen_mcep_dtw - gt_mcep_dtw) ** 2, 1)
+        mcd = np.mean(10.0 / np.log(10.0) * np.sqrt(2 * diff2sum), 0)
+        print("MCD calculation time:", time.time() - start_time)
+
+        return mcd
+
+
+if __name__ == "__main__":
+    fs = 44100
+    # seed
+    torch.manual_seed(0)
+    np.random.seed(0)
+
+    ref = torch.randn(2*fs)
+    inf = ref + 0.01 * torch.randn(2*fs)
+
+    mcd_metric = MCDMetric(n_fft=1024, n_shift=256)
+    mcd = mcd_metric(ref, inf, fs)
+    print(mcd)
+
+    # compare with SPTK
+    mcd_sptk = calculate(
+        inf_audio=inf.numpy(),
+        ref_audio=ref.numpy(),
+        fs=fs,
+        n_fft=1024,
+        n_shift=256,
+    )
+    print(mcd_sptk)

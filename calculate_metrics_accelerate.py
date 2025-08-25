@@ -62,7 +62,7 @@ def create_data_pairs(base_dir, ref_scp, inf_scp, ref_text, utt2lang):
 
 def setup_models(device, args):
     # Intrusive metrics:
-    mcd_fn = MCDMetric() if args.intrusive_metrics and args.mcd else None  # needs to run on CPU on np arrays
+    mcd_fn = MCDMetric().to(device) if args.intrusive_metrics and args.mcd else None
     pesq_fn = PESQMetric() if args.intrusive_metrics else None  # needs to run on CPU on np arrays
     lsd_fn = LSDMetric().to(device) if args.intrusive_metrics else None
     sdr_fn = SDRMetric().to(device) if args.intrusive_metrics else None
@@ -161,7 +161,7 @@ def main(args):
                 if models["Intrusive"]["MCD"] is not None:
                     start_time = time.time()
                     # requires numpy at original sampling rate
-                    scores["MCD"] = models["Intrusive"]["MCD"](ref_np.squeeze(), inf_np.squeeze(), ref_sr)
+                    scores["MCD"] = models["Intrusive"]["MCD"](ref.squeeze(), inf.squeeze(), ref_sr)
                     end_time = time.time()
                     print(f"MCD computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Intrusive"]["PESQ"] is not None:
