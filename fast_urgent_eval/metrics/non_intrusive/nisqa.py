@@ -1026,6 +1026,8 @@ class NISQA_DIM_MOS(nn.Module):
         args["dim"] = True
         args["csv_mos_train"] = None  # column names hardcoded for dim models
         args["csv_mos_val"] = None
+        args["double_ended"] = False
+        args["csv_ref"] = None
 
         model_args = {
             "ms_seg_length": args["ms_seg_length"],
