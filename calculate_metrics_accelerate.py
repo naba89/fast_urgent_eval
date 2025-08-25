@@ -142,6 +142,11 @@ def create_data_pairs(base_dir, ref_scp, inf_scp, ref_text, utt2lang):
     transcripts = {}
     language_id = {}
 
+    ref_scp = os.path.join(base_dir, ref_scp)
+    inf_scp = os.path.join(base_dir, inf_scp)
+    ref_text = os.path.join(base_dir, ref_text)
+    utt2lang = os.path.join(base_dir, utt2lang)
+
     with open(ref_scp, "r") as f:
         for line in f:
             uid, audio_path = line.strip().split()
@@ -303,21 +308,12 @@ def main(args):
 if __name__ == '__main__':
     torch.set_float32_matmul_precision("high")
     parser = argparse.ArgumentParser()
-    parser.add_argument("--inf_scp", type=str,
-                        default="/home/mil/nabarun/github/urgent2026/exp/results/nonblind/scnet_transformer_ssl_v3/enh.scp",
-                        )
-    parser.add_argument("--output_dir", type=str, default="./results")
-    parser.add_argument("--base_dir", type=str,
-                        default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/")
-    parser.add_argument("--ref_scp", type=str,
-                        default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/data/nonblind/spk1.scp",
-                        )
-    parser.add_argument("--ref_text", type=str,
-                        default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/data/nonblind/text",
-                        )
-    parser.add_argument("--utt2lang", type=str,
-                        default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/data/nonblind/utt2lang",
-                        )
+    parser.add_argument("--inf_scp", type=str, required=True)
+    parser.add_argument("--output_dir", type=str, required=True)
+    parser.add_argument("--base_dir", type=str, default="~/urgent2025_challenge/")
+    parser.add_argument("--ref_scp", type=str, default="data/validation/spk1.scp")
+    parser.add_argument("--ref_text", type=str, default="data/validation/text")
+    parser.add_argument("--utt2lang", type=str, default="data/validation/utt2lang")
     parser.add_argument("--intrusive_metrics", action="store_true", default=False)
     parser.add_argument("--non_intrusive_metrics", action="store_true", default=False)
     parser.add_argument("--task_dependent_metrics", action="store_true", default=False)
