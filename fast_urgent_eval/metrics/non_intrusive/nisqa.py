@@ -1073,28 +1073,30 @@ class NISQA_DIM_MOS(nn.Module):
         )
         self.model = self.model.eval()
 
-        self.sample_rate = args["ms_sr"] if args["ms_sr"] else 48000
-
         n_fft = args["ms_n_fft"]
-        hop_length = int(args["ms_hop_length"] * self.sample_rate)
-        win_length = int(args["ms_win_length"] * self.sample_rate)
         n_mels = args["ms_n_mels"]
         fmax = args["ms_fmax"]
-        self.mel_spec = torchaudio.transforms.MelSpectrogram(
-            sample_rate=self.sample_rate,
-            n_fft=n_fft,
-            win_length=win_length,
-            hop_length=hop_length,
-            n_mels=n_mels,
-            f_max=fmax,
-            center=True,
-            pad_mode="reflect",
-            power=1.0,
-            f_min=0.0,
-            mel_scale="slaney",
-            norm="slaney",
-            normalized=True,
-        )
+
+        self.valid_srs = [16000, 22050, 24000, 32000, 44100, 48000]
+        self.mel_specs = nn.ModuleDict()
+        for sr in self.valid_srs:
+            hop_length = int(args["ms_hop_length"] * sr)
+            win_length = int(args["ms_win_length"] * sr)
+            self.mel_specs[str(sr)] = torchaudio.transforms.MelSpectrogram(
+                sample_rate=sr,
+                n_fft=n_fft,
+                win_length=win_length,
+                hop_length=hop_length,
+                n_mels=n_mels,
+                f_max=fmax,
+                center=True,
+                pad_mode="reflect",
+                power=1.0,
+                f_min=0.0,
+                mel_scale="slaney",
+                norm="slaney",
+                normalized=True,
+            )
 
         amin = 1e-4
         ref_value = 1.0
@@ -1114,8 +1116,8 @@ class NISQA_DIM_MOS(nn.Module):
         """
         x: (batch_size, n_samples)
         """
-        x = torchaudio.functional.resample(inf, orig_freq=fs, new_freq=self.sample_rate)
-        mel_spec = self.mel_spec(x)  # (batch_size, n_mels, n_frames)
+        assert fs in self.valid_srs, f"fs {fs} not in {self.valid_srs}"
+        mel_spec = self.mel_specs[str(fs)](inf)  # (batch_size, n_mels, n_frames)
         mel_spec = self.amp_to_db(mel_spec)
         spec_seg, wins, wins_cpu = segment_specs3(x=mel_spec, seg_length=self.seg_length, seg_hop=self.seg_hop_length)
         nisqa_mos = self.model(spec_seg, wins, wins_cpu)[:, 0]

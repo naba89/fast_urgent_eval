@@ -1,7 +1,5 @@
 import torch
 import  torch.nn as nn
-import torchaudio
-from torch.nn.utils import remove_weight_norm
 
 
 class UTMOS(nn.Module):
@@ -13,6 +11,6 @@ class UTMOS(nn.Module):
 
     @torch.inference_mode()
     def forward(self, inf, sr, **kwargs):
-        """wave-to-score :: (B, T) -> (B, F) """
+        """wave-to-score :: (B, T) -> float """
         utter_score = self.utmos_model(inf, sr)
         return utter_score.mean().item()
