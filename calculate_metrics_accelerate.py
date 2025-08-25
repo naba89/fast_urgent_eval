@@ -39,6 +39,25 @@ def _natural_key(s: str):
     return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", s)]
 
 
+def _format_results_lines_from_means(means_dict):
+    """
+    means_dict: {metric_name: mean_value}
+    Returns list[str] with aligned 'metric_name :      value'
+    """
+    if not means_dict:
+        return []
+    metric_width = max(len(m) for m in means_dict.keys())
+    lines = []
+    for metric_name in sorted(means_dict.keys()):
+        v = means_dict[metric_name]
+        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+            val = "nan"
+            lines.append(f"{metric_name:<{metric_width}} : {val:>10}")
+        else:
+            lines.append(f"{metric_name:<{metric_width}} : {v:>10.6f}")
+    return lines
+
+
 def write_metrics_files(all_gathered, root, accelerator):
     """Write metrics to disk in the structure requested."""
     # Only main process does I/O
@@ -76,20 +95,22 @@ def write_metrics_files(all_gathered, root, accelerator):
                     else:
                         f.write(f"{uid:<{uid_width}}  {v:.6f}\n")
 
-        # Compute means and write category RESULTS.txt
+        # Compute means and write category RESULTS.txt (aligned)
         results_path = os.path.join(cat_dir, "RESULTS.txt")
-        lines = []
-        for metric_name, pairs in sorted(metrics_map.items()):
+        means_map = {}
+        for metric_name, pairs in metrics_map.items():
             vals = [v for _, v in pairs if not (isinstance(v, float) and (math.isnan(v) or math.isinf(v)))]
             mean_v = sum(vals) / len(vals) if vals else float("nan")
-            lines.append(f"{metric_name}: {mean_v:.6f}")
+            means_map[metric_name] = mean_v
+
+        lines = _format_results_lines_from_means(means_map)
         with open(results_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines) + "\n")
+            if lines:
+                f.write("\n".join(lines) + "\n")
 
-        cat_results_lines[category] = lines
+        cat_results_lines[category] = means_map  # keep raw means for global summary
 
-    # Global RESULTS_<timestamp>.txt with all categories concatenated
-    # Timestamp in local time (Tokyo)
+    # Global RESULTS_<timestamp>.txt with aligned blocks per category
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     global_results_path = os.path.join(root, f"RESULTS_{ts}.txt")
     with open(global_results_path, "w", encoding="utf-8") as f:
@@ -99,7 +120,9 @@ def write_metrics_files(all_gathered, root, accelerator):
                 f.write("\n")
             first = False
             f.write(f"[{category}]\n")
-            f.write("\n".join(cat_results_lines[category]) + "\n")
+            lines = _format_results_lines_from_means(cat_results_lines[category])
+            if lines:
+                f.write("\n".join(lines) + "\n")
 
     accelerator.print(f"Wrote results to: {root}")
     accelerator.print(f"Global summary: {global_results_path}")
@@ -235,7 +258,6 @@ def main(args):
 
     # debug
     data_pairs = data_pairs[:21]  # test odd number of samples
-    orig_all_uids = [uid for uid, _, _, _, _ in data_pairs]
 
     process_group_kwargs = InitProcessGroupKwargs(timeout=timedelta(seconds=36000))  # 10 hours
     accelerator = Accelerator(kwargs_handlers=[process_group_kwargs])
