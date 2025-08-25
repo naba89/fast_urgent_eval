@@ -1136,9 +1136,7 @@ class NISQA_DIM_MOS(nn.Module):
         """
         x: (batch_size, n_samples)
         """
-        # assert fs in self.valid_srs, f"fs {fs} not in {self.valid_srs}"
-        # mel_spec = self.mel_specs[str(fs)](inf)  # (batch_size, n_mels, n_frames)
-        # mel_spec = self.amp_to_db(mel_spec)
+        assert fs == 48000, "Only 48kHz supported"
         mel_spec = get_librosa_melspec(
             y=inf,
             sr=fs,
