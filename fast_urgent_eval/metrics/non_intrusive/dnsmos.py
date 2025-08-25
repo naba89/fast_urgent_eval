@@ -20,7 +20,7 @@ class DNSMOS(nn.Module):
             PRIMARY_MODEL_PATH,
             P808_MODEL_PATH,
             use_gpu="cuda" in device,
-            convert_to_torch=False,
+            convert_to_torch=True,
         )
 
     @torch.inference_mode()
