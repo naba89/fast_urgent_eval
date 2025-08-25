@@ -256,9 +256,6 @@ def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, u
 def main(args):
     data_pairs = create_data_pairs(args.base_dir, args.ref_scp, args.inf_scp, args.ref_text, args.utt2lang)
 
-    # debug
-    data_pairs = data_pairs[:21]  # test odd number of samples
-
     process_group_kwargs = InitProcessGroupKwargs(timeout=timedelta(seconds=36000))  # 10 hours
     accelerator = Accelerator(kwargs_handlers=[process_group_kwargs])
     device = accelerator.device
@@ -284,20 +281,20 @@ def main(args):
     all_gathered = gather_object(all_local)
 
     if accelerator.is_main_process:
-        root_dir = "."
-        write_metrics_files(all_gathered, root=os.path.join(root_dir, "results"), accelerator=accelerator)
+        write_metrics_files(all_gathered, root=args.output_dir, accelerator=accelerator)
 
 
 if __name__ == '__main__':
     torch.set_float32_matmul_precision("high")
     parser = argparse.ArgumentParser()
+    parser.add_argument("--inf_scp", type=str,
+                        default="/home/mil/nabarun/github/urgent2026/exp/results/nonblind/scnet_transformer_ssl_v3/enh.scp",
+                        )
+    parser.add_argument("--output_dir", type=str, default="./results")
     parser.add_argument("--base_dir", type=str,
                         default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/")
     parser.add_argument("--ref_scp", type=str,
                         default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/data/nonblind/spk1.scp",
-                        )
-    parser.add_argument("--inf_scp", type=str,
-                        default="/home/mil/nabarun/github/urgent2026/exp/results/nonblind/scnet_transformer_ssl_v3/enh.scp",
                         )
     parser.add_argument("--ref_text", type=str,
                         default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/data/nonblind/text",
