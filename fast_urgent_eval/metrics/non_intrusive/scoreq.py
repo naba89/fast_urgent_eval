@@ -165,7 +165,7 @@ class Scoreq(nn.Module):
         wave = dynamic_pad(wave, PADDING_MULTIPLE)
         return wave
 
-    def forward(self, ref, inf, fs, **kwargs):
+    def forward(self, inf, fs, ref=None, **kwargs):
         """Forward method to make the class callable."""
         if self.mode == 'nr':
             return self.predict_tensor(inf, fs)

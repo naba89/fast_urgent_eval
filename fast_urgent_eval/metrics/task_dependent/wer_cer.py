@@ -38,8 +38,12 @@ class EvalResult:
     uid: Optional[str]
     hyp_text: str
     ref_text: str
-    WER: Dict[str, int | str]
-    CER: Dict[str, int | str]
+    WER_details: Dict[str, int | str]
+    CER_details: Dict[str, int | str]
+    WER: float
+    CER: float
+    CAcc: float
+    WAcc: float
 
 
 class OWSMEvaluator(torch.nn.Module):
@@ -196,7 +200,17 @@ class OWSMEvaluator(torch.nn.Module):
 
         wer = self._opcount_words(ref_text_clean, hyp_text)
         cer = self._opcount_chars(ref_text_clean, hyp_text)
-        return EvalResult(uid, hyp_text=hyp_text, ref_text=ref_text_clean, WER=wer, CER=cer)
+
+        overall_wer = wer_from_counts(wer) * 100.0
+        overall_cer = wer_from_counts(cer) * 100.0
+
+        CAcc = 100.0 - overall_cer
+        WAcc = 100.0 - overall_wer
+
+        return EvalResult(uid, hyp_text=hyp_text, ref_text=ref_text_clean,
+                          WER_details=wer, CER_details=cer,
+                          WER=overall_wer, CER=overall_cer,
+                          CAcc=CAcc, WAcc=WAcc)
 
     # --------------------------
     # Utilities
@@ -286,15 +300,25 @@ if __name__ == "__main__":
     # Minimal demo (replace with your own loader). No file I/O in the core logic.
     import soundfile as sf
 
-    _wav_path = "path/to/audio.wav"
-    _ref_text = "type reference here"
+    _wav_path = "/Users/nabarungoswami/Downloads/1_clean.wav"
+    _ref_text = "They should realize, the chairman wants a deputy he can trust."
     _lang_id = "none"  # or a specific language ID like "<eng>"
 
     _audio_np,_sr = sf.read(_wav_path, dtype="float32")
     _audio = torch.from_numpy(_audio_np)
+    _audio = torchaudio.functional.resample(_audio, _sr, 16000)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    evaluator = OWSMEvaluator(device=device)  # or "cpu"
-    res = evaluator.evaluate(_audio.to(device), _sr, _ref_text, _lang_id, uid="demo-utt")
-    print("WER:", wer_from_counts(res.WER))
-    print("CER:", wer_from_counts(res.CER))
+    evaluator = OWSMEvaluator(device=device).to(device)  # or "cpu"
+    res = evaluator(_audio.to(device), 16000, _ref_text, _lang_id, uid="demo-utt")
+
+    print(f"Utterance ID: {res.uid}")
+    print(f"Reference: {res.ref_text}")
+    print(f"Hypothesis: {res.hyp_text}")
+    print(f"WER: {res.WER:.2f}%")
+    print(f"CER: {res.CER:.2f}%")
+    print(f"Word Accuracy: {res.WAcc:.2f}%")
+    print(f"Character Accuracy: {res.CAcc:.2f}%")
+
+    print(f"WER details: {res.WER_details}")
+    print(f"CER details: {res.CER_details}")

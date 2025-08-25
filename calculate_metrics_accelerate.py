@@ -1,5 +1,7 @@
 import logging
 
+from accelerate.utils import gather_object
+
 # Disable all logging messages at or below INFO level
 logging.disable(logging.INFO)
 
@@ -60,53 +62,110 @@ def create_data_pairs(base_dir, ref_scp, inf_scp, ref_text, utt2lang):
     return data_pairs
 
 
-def setup_models(device, args):
+def setup_metrics(device, args):
+    metrics = {}
     # Intrusive metrics:
-    mcd_fn = MCDMetric().to(device) if args.intrusive_metrics and args.mcd else None
-    pesq_fn = PESQMetric() if args.intrusive_metrics else None  # needs to run on CPU on np arrays
-    lsd_fn = LSDMetric().to(device) if args.intrusive_metrics else None
-    sdr_fn = SDRMetric().to(device) if args.intrusive_metrics else None
-    stoi_fn = STOI().to(device) if args.intrusive_metrics else None
+    if args.intrusive_metrics:
+        metrics["MCD"] = MCDMetric().to(device)
+        metrics["PESQ"] = PESQMetric()  # needs to run on CPU on np arrays
+        metrics["LSD"] = LSDMetric().to(device)
+        metrics["SDR"] = SDRMetric().to(device)
+        metrics["STOI"] = STOI().to(device)
 
     # Non-intrusive metrics
-    dnsmos_fn = DNSMOSOVRL().to(device) if args.non_intrusive_metrics else None
-    nisqa_fn = NISQA_DIM_MOS().to(device) if args.non_intrusive_metrics else None
-    scoreq_fn = Scoreq().to(device) if args.non_intrusive_metrics else None
-    utmos_fn = UTMOS().to(device) if args.non_intrusive_metrics else None
-    squim_fn = SQUIMMetrics().to(device) if args.non_intrusive_metrics else None
+    if args.non_intrusive_metrics:
+        metrics["DNSMOS"] = DNSMOSOVRL().to(device)
+        metrics["NISQA"] = NISQA_DIM_MOS().to(device)
+        metrics["Scoreq"] = Scoreq().to(device)
+        metrics["UTMOS"] = UTMOS().to(device)
+        metrics["SQUIM"] = SQUIMMetrics().to(device)
 
     # Task-dependent metrics
-    speaker_sim_fn = SpeakerSimilarity().to(device) if args.task_dependent_metrics else None
-    wer_cer_fn = OWSMEvaluator(device=device.type).to(device) if args.task_dependent_metrics else None
+    if args.task_dependent_metrics:
+        metrics["SpeakerSimilarity"] = SpeakerSimilarity().to(device)
+        metrics["WER_CER"] = OWSMEvaluator(device=device.type).to(device)
 
     # Task-independent metrics
-    phoneme_similarity_fn = LevenshteinPhonemeSimilarity(device) if args.task_independent_metrics else None
-    speech_bert_score_fn = SpeechBERTScore(device.type) if args.task_independent_metrics else None
+    if args.task_independent_metrics:
+        metrics["PhonemeSimilarity"] = LevenshteinPhonemeSimilarity(device)
+        metrics["SpeechBERTScore"] = SpeechBERTScore(device.type)
 
-    return {
-    "Intrusive": {
-        "LSD": lsd_fn,
-        "MCD": mcd_fn,
-        "PESQ": pesq_fn,
-        "SDR": sdr_fn,
-        "STOI": stoi_fn,
-    },
-    "Non-Intrusive": {
-        "DNSMOS": dnsmos_fn,
-        "NISQA": nisqa_fn,
-        "Scoreq": scoreq_fn,
-        "UTMOS": utmos_fn,
-        "SQUIM": squim_fn,
-    },
-    "Task-Dependent": {
-        "SpeakerSimilarity": speaker_sim_fn,
-        "WER_CER": wer_cer_fn,
-    },
-    "Task-Independent": {
-        "PhonemeSimilarity": phoneme_similarity_fn,
-        "SpeechBERTScore": speech_bert_score_fn,
-    }
-    }
+    return metrics
+
+
+def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, uid, device):
+
+    assert ref_sr == inf_sr, f"Sampling rate mismatch for {uid}: {ref_sr} vs {inf_sr}"
+    assert ref.shape == inf.shape, f"Shape mismatch for {uid}: {ref.shape} vs {inf.shape}"
+
+    ref_np = ref.numpy()
+    inf_np = inf.numpy()
+
+    ref = ref.to(device)
+    inf = inf.to(device)
+
+    # resample once, since 16khz is needed by many metrics
+    ref_16k = torchaudio.functional.resample(ref, ref_sr, 16000)
+    inf_16k = torchaudio.functional.resample(inf, inf_sr, 16000)
+
+    scores = {}
+    # Intrusive metrics
+    if args.intrusive_metrics:
+        scores["Intrusive"] = {}
+        if metrics["Intrusive"]["LSD"] is not None:
+            scores["Intrusive"]["LSD"] = metrics["Intrusive"]["LSD"](ref, inf, ref_sr)
+        if metrics["Intrusive"]["MCD"] is not None:
+            scores["Intrusive"]["MCD"] = metrics["Intrusive"]["MCD"](ref.squeeze(), inf.squeeze(), ref_sr)
+        if metrics["Intrusive"]["PESQ"] is not None:
+            if ref_sr == 8000:
+                ref_pesq = ref_np
+                inf_pesq = inf_np
+                sr_pesq = 8000
+            else:
+                ref_pesq = ref_16k.cpu().numpy()
+                inf_pesq = inf_16k.cpu().numpy()
+                sr_pesq = 16000
+            scores["Intrusive"]["PESQ"] = metrics["Intrusive"]["PESQ"](ref_pesq.squeeze(), inf_pesq.squeeze(), sr_pesq)
+        if metrics["Intrusive"]["SDR"] is not None:
+            scores["Intrusive"]["SDR"] = metrics["Intrusive"]["SDR"](ref, inf)
+        if metrics["Intrusive"]["STOI"] is not None:
+            scores["Intrusive"]["STOI"] = metrics["Intrusive"]["STOI"](ref=ref.squeeze(),
+                                                          inf=inf.squeeze(),
+                                                          fs=ref_sr, extended=True)
+    # Non-intrusive metrics
+    if args.non_intrusive_metrics:
+        scores["NonIntrusive"] = {}
+        if metrics["Non-Intrusive"]["DNSMOS"] is not None:
+            scores["NonIntrusive"]["DNSMOS"] = metrics["Non-Intrusive"]["DNSMOS"](inf=inf_16k, fs=16000)
+        if metrics["Non-Intrusive"]["NISQA"] is not None:
+            scores["NonIntrusive"]["NISQA"] = metrics["Non-Intrusive"]["NISQA"](inf=inf, fs=inf_sr)
+        if metrics["Non-Intrusive"]["Scoreq"] is not None:
+            scores["NonIntrusive"]["Scoreq"] = metrics["Non-Intrusive"]["Scoreq"](inf=inf_16k, fs=16000)
+        if metrics["Non-Intrusive"]["UTMOS"] is not None:
+            scores["NonIntrusive"]["UTMOS"] = metrics["Non-Intrusive"]["UTMOS"](inf=inf_16k, sr=16000)
+        if metrics["Non-Intrusive"]["SQUIM"] is not None:
+            # stoi, pesq, sdr
+            (scores["NonIntrusive"]["SQUIM_STOI"],
+             scores["NonIntrusive"]["SQUIM_PESQ"],
+             scores["NonIntrusive"]["SQUIM_SDR"]) = metrics["Non-Intrusive"]["SQUIM"](inf_16k, 16000)
+
+    # Task-dependent metrics
+    if args.task_dependent_metrics:
+        scores["TaskDependent"] = {}
+        if metrics["Task-Dependent"]["SpeakerSimilarity"] is not None:
+            scores["TaskDependent"]["SpeakerSimilarity"] = metrics["Task-Dependent"]["SpeakerSimilarity"](ref=ref_16k, inf=inf_16k, fs=16000)
+        if metrics["Task-Dependent"]["WER_CER"] is not None:
+            scores["TaskDependent"]["WER_CER"] = metrics["Task-Dependent"]["WER_CER"](audio=inf_16k, ref_text=ref_txt,
+                                                                     sr=16000, lang_id=lang_id, uid=uid)
+    # Task-independent metrics
+    if args.task_independent_metrics:
+        scores["TaskIndependent"] = {}
+        if metrics["Task-Independent"]["PhonemeSimilarity"] is not None:
+            scores["TaskIndependent"]["PhonemeSimilarity"] = metrics["Task-Independent"]["PhonemeSimilarity"](ref_16k.squeeze(), inf_16k.squeeze(), 16000)
+        if metrics["Task-Independent"]["SpeechBERTScore"] is not None:
+            scores["TaskIndependent"]["SpeechBERTScore"] = metrics["Task-Independent"]["SpeechBERTScore"](ref_16k, inf_16k, 16000)
+
+    return scores
 
 
 @torch.inference_mode()
@@ -119,149 +178,26 @@ def main(args):
     torch.set_default_device(device)
     print("Using device:", device, flush=True)
 
-    models = setup_models(device, args)
+    metrics = setup_metrics(device, args)
 
     with accelerator.split_between_processes(data_pairs, apply_padding=False) as split_data_pairs:
         print(f"Processing {len(split_data_pairs)} data pairs on device {device}", flush=True)
 
-        # Here you would call your processing function, e.g.:
-        # results = process_data_pairs(split_data_pairs, device=device)
-
-        # For demonstration, we just print the first few pairs
         for uid, ref_txt, inf_audio, lang_id, ref_audio in tqdm.tqdm(split_data_pairs,
                                                                      disable=not accelerator.is_local_main_process):
-            # print(f"UID: {uid}, Ref Text: {ref_txt}, Inf Audio: {inf_audio}, Lang ID: {lang_id}, Ref Audio: {ref_audio}")
             ref, ref_sr = torchaudio.load(ref_audio)
             inf, inf_sr = torchaudio.load(inf_audio)
 
-            ref_np = ref.numpy()
-            inf_np = inf.numpy()
+            scores = compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, uid, device)
 
-            assert ref_sr == inf_sr, f"Sampling rate mismatch for {uid}: {ref_sr} vs {inf_sr}"
-            assert ref.shape == inf.shape, f"Shape mismatch for {uid}: {ref.shape} vs {inf.shape}"
-
-            ref = ref.to(device)
-            inf = inf.to(device)
-
-            # resample once, since 16khz is needed by many metrics
-            ref_16k = torchaudio.functional.resample(ref, ref_sr, 16000)
-            inf_16k = torchaudio.functional.resample(inf, inf_sr, 16000)
-
-
-            # Run the metrics manually, since different metrics might need different arguments
-            scores = {}
-
-            # Intrusive metrics
-            if args.intrusive_metrics:
-                if models["Intrusive"]["LSD"] is not None:
-                    # start_time = time.time()
-                    scores["LSD"] = models["Intrusive"]["LSD"](ref, inf, ref_sr)
-                    # end_time = time.time()
-                    # print(f"LSD computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
-                if models["Intrusive"]["MCD"] is not None:
-                    # start_time = time.time()
-                    # requires numpy at original sampling rate
-                    scores["MCD"] = models["Intrusive"]["MCD"](ref.squeeze(), inf.squeeze(), ref_sr)
-                    # end_time = time.time()
-                    # print(f"MCD computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
-                if models["Intrusive"]["PESQ"] is not None:
-                    # start_time = time.time()
-                    # needs either 8k or 16k
-                    if ref_sr == 8000:
-                        ref_pesq = ref_np
-                        inf_pesq = inf_np
-                        sr_pesq = 8000
-                    else:
-                        ref_pesq = ref_16k.cpu().numpy()
-                        inf_pesq = inf_16k.cpu().numpy()
-                        sr_pesq = 16000
-                    scores["PESQ"] = models["Intrusive"]["PESQ"](ref_pesq.squeeze(), inf_pesq.squeeze(), sr_pesq)
-                    # end_time = time.time()
-                    # print(f"PESQ computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
-                if models["Intrusive"]["SDR"] is not None:
-                    # start_time = time.time()
-                    scores["SDR"] = models["Intrusive"]["SDR"](ref, inf)
-                    # end_time = time.time()
-                    # print(f"SDR computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
-                if models["Intrusive"]["STOI"] is not None:
-                    # start_time = time.time()
-                    # needs 10k, so resample to 10khz using either torchaudio or pystoi
-                    # if args.resample_oct:
-                    #     ref_10k = ref_np.squeeze()
-                    #     inf_10k = inf_np.squeeze()
-                    #     if ref_sr != 10000:  # for STOI
-                    #         ref_10k = resample_oct(ref_np, 10000, ref_sr)
-                    #         inf_10k = resample_oct(inf_np, 10000, inf_sr)
-                    #     ref_10k = torch.from_numpy(ref_10k).to(device)
-                    #     inf_10k = torch.from_numpy(inf_10k).to(device)
-                    # else:
-                    #     ref_10k = torchaudio.functional.resample(ref, ref_sr, 10000, resampling_method="sinc_interp_kaiser")
-                    #     inf_10k = torchaudio.functional.resample(inf, inf_sr, 10000, resampling_method="sinc_interp_kaiser")
-
-                    # scores["STOI"] = models["Intrusive"]["STOI"](ref=ref_10k.squeeze(), inf=inf_10k.squeeze(),
-                    #                                              fs=10000, extended=True)
-                    scores["STOI"] = models["Intrusive"]["STOI"](ref=ref.squeeze(), inf=inf.squeeze(),
-                                                                 fs=ref_sr, extended=True)
-                    # end_time = time.time()
-                    # print(f"STOI computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
-
-            # Non-intrusive metrics
-            if args.non_intrusive_metrics:
-                if models["Non-Intrusive"]["DNSMOS"] is not None:
-                    # start_time = time.time()
-                    scores["DNSMOS"] = models["Non-Intrusive"]["DNSMOS"](inf=inf_16k, fs=16000)
-                    # end_time = time.time()
-                    # print(f"DNSMOS computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
-                if models["Non-Intrusive"]["NISQA"] is not None:
-                    # start_time = time.time()
-                    scores["NISQA"] = models["Non-Intrusive"]["NISQA"](inf=inf, fs=inf_sr)
-                    # end_time = time.time()
-                    # print(f"NISQA computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
-                if models["Non-Intrusive"]["Scoreq"] is not None:
-                    # start_time = time.time()
-                    scores["Scoreq"] = models["Non-Intrusive"]["Scoreq"](ref=ref_16k, inf=inf_16k, fs=16000)
-                    # end_time = time.time()
-                    # print(f"Scoreq computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
-                if models["Non-Intrusive"]["UTMOS"] is not None:
-                    # start_time = time.time()
-                    scores["UTMOS"] = models["Non-Intrusive"]["UTMOS"](inf=inf_16k, sr=16000)
-                    # end_time = time.time()
-                    # print(f"UTMOS computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
-                if models["Non-Intrusive"]["SQUIM"] is not None:
-                    # start_time = time.time()
-                    scores["SQUIM"] = models["Non-Intrusive"]["SQUIM"](inf_16k, 16000)
-                    # end_time = time.time()
-                    # print(f"SQUIM computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
-
-            # Task-dependent metrics
-            if args.task_dependent_metrics:
-                if models["Task-Dependent"]["SpeakerSimilarity"] is not None:
-                    # start_time = time.time()
-                    scores["SpeakerSimilarity"] = models["Task-Dependent"]["SpeakerSimilarity"](ref=ref_16k, inf=inf_16k, fs=16000)
-                    # end_time = time.time()
-                    # print(f"SpeakerSimilarity computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
-                if models["Task-Dependent"]["WER_CER"] is not None:
-                    # start_time = time.time()
-                    scores["WER_CER"] = models["Task-Dependent"]["WER_CER"](audio=inf_16k, ref_text=ref_txt,
-                                                                   sr=16000, lang_id=lang_id, uid=uid)
-                    # end_time = time.time()
-                    # print(f"WER_CER computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
-
-            # Task-independent metrics
-            if args.task_independent_metrics:
-                if models["Task-Independent"]["PhonemeSimilarity"] is not None:
-                    # start_time = time.time()
-                    scores["PhonemeSimilarity"] = models["Task-Independent"]["PhonemeSimilarity"](ref_16k.squeeze(), inf_16k.squeeze(), 16000)
-                    # end_time = time.time()
-                    # print(f"PhonemeSimilarity computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
-                if models["Task-Independent"]["SpeechBERTScore"] is not None:
-                    # start_time = time.time()
-                    scores["SpeechBERTScore"] = models["Task-Independent"]["SpeechBERTScore"](ref_16k, inf_16k, 16000)
-                    # end_time = time.time()
-                    # print(f"SpeechBERTScore computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
-
-            # print(f"UID: {uid}, Scores: {scores}", flush=True)
-
+    accelerator.wait_for_everyone()
+    scores = gather_object(scores)
+    if accelerator.is_main_process:
+        import json
+        out_file = os.path.join(args.base_dir, "metrics.json")
+        with open(out_file, "w") as f:
+            json.dump(scores, f, indent=4)
+        print(f"Metrics saved to {out_file}", flush=True)
 
 
 if __name__ == '__main__':
@@ -281,12 +217,10 @@ if __name__ == '__main__':
     parser.add_argument("--utt2lang", type=str,
                         default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/data/nonblind/utt2lang",
                         )
-    parser.add_argument("--intrusive_metrics", action="store_false", default=True)
-    parser.add_argument("--non_intrusive_metrics", action="store_false", default=True)
-    parser.add_argument("--task_dependent_metrics", action="store_false", default=True)
-    parser.add_argument("--task_independent_metrics", action="store_false", default=True)
-    parser.add_argument("--mcd", action="store_false", default=True, help="Compute MCD, which is slow and requires numpy arrays")
-    parser.add_argument("--resample_oct", action="store_true", default=False, help="Use pystoi resample_oct for STOI computation, which is slow but original")
+    parser.add_argument("--intrusive_metrics", action="store_true", default=False)
+    parser.add_argument("--non_intrusive_metrics", action="store_true", default=False)
+    parser.add_argument("--task_dependent_metrics", action="store_true", default=False)
+    parser.add_argument("--task_independent_metrics", action="store_true", default=False)
     args = parser.parse_args()
 
     main(args)

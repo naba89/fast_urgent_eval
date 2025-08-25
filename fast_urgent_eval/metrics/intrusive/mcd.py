@@ -233,3 +233,5 @@ if __name__ == "__main__":
         n_shift=256,
     )
     print(mcd_sptk)
+
+    print("Difference:", abs(mcd - mcd_sptk))
