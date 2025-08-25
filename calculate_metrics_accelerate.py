@@ -205,10 +205,10 @@ if __name__ == '__main__':
     parser.add_argument("--utt2lang", type=str,
                         default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/data/nonblind/utt2lang",
                         )
-    parser.add_argument("--intrusive", action="store_true", default=False)
-    parser.add_argument("--non_intrusive", action="store_true", default=False)
-    parser.add_argument("--task_dependent", action="store_true", default=False)
-    parser.add_argument("--task_independent", action="store_true", default=False)
+    parser.add_argument("--intrusive_metrics", action="store_true", default=False)
+    parser.add_argument("--non_intrusive_metrics", action="store_true", default=False)
+    parser.add_argument("--task_dependent_metrics", action="store_true", default=False)
+    parser.add_argument("--task_independent_metrics", action="store_true", default=False)
     args = parser.parse_args()
 
     main(args)
