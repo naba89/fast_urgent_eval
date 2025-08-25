@@ -11,7 +11,6 @@ class UTMOS(nn.Module):
         self.feature_only = feature_only
         self.utmos_model = torch.hub.load("tarepan/SpeechMOS:v1.2.0",
                                      "utmos22_strong", trust_repo=True).eval()
-        self.utmos_model.blstm.train()
         for p in self.utmos_model.parameters():
             p.requires_grad = False
 
