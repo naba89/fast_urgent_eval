@@ -24,7 +24,7 @@ from fast_urgent_eval.metrics.intrusive.mcd import MCDMetric
 from fast_urgent_eval.metrics.intrusive.pesq import PESQMetric
 from fast_urgent_eval.metrics.intrusive.sdr import SDRMetric
 from fast_urgent_eval.metrics.intrusive.stoi import STOI
-from fast_urgent_eval.metrics.non_intrusive.dnsmos import DNSMOSOVRL
+from fast_urgent_eval.metrics.non_intrusive.dnsmos import DNSMOS
 from fast_urgent_eval.metrics.non_intrusive.nisqa import NISQA_DIM_MOS
 from fast_urgent_eval.metrics.non_intrusive.scoreq import Scoreq
 from fast_urgent_eval.metrics.non_intrusive.squim import SQUIMMetrics
@@ -171,7 +171,7 @@ def setup_metrics(device, args):
 
     # Non-intrusive metrics
     if args.non_intrusive_metrics:
-        metrics["DNSMOS"] = DNSMOSOVRL().to(device)
+        metrics["DNSMOS"] = DNSMOS(device.type)
         metrics["NISQA"] = NISQA_DIM_MOS().to(device)
         metrics["Scoreq"] = Scoreq().to(device)
         metrics["UTMOS"] = UTMOS().to(device)
