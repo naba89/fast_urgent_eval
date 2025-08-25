@@ -195,8 +195,8 @@ def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, u
     assert ref_sr == inf_sr, f"Sampling rate mismatch for {uid}: {ref_sr} vs {inf_sr}"
     assert ref.shape == inf.shape, f"Shape mismatch for {uid}: {ref.shape} vs {inf.shape}"
 
-    ref_np = ref.numpy()
-    inf_np = inf.numpy()
+    ref_np = ref.numpy().squeeze()
+    inf_np = inf.numpy().squeeze()
 
     # resample once, since 16khz is needed by many metrics, use soxr for quality
     ref_16k = soxr.resample(ref_np, ref_sr, 16000)
