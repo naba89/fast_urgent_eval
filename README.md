@@ -13,6 +13,7 @@ Evaluation on 1 node 4 A100 GPUs for 1000 utterances takes less than 10 minutes,
 - Single audio file reading to minimize I/O overhead.
 - Consolidated resampling to avoid redundant computations.
 - Checked results against official implementations to ensure accuracy within acceptable tolerances (1e-4 or better).
+- Though I have tried my best to ensure correctness, please verify the results for your specific use cases.
 
 ## Installation
 
