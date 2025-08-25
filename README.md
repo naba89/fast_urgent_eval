@@ -18,8 +18,12 @@ Evaluation on 1 node 4 A100 GPUs for 1000 utterances takes less than 10 minutes,
 ## Installation
 
 ```bash
+git clone https://github.com/naba89/fast_urgent_eval.git
+cd fast_urgent_eval
+# Create conda environment
 conda env create -f environment.yml
 conda activate fast_urgent_eval
+# Install pip dependencies
 pip install -r requirements.txt
 ```
 
