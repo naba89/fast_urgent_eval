@@ -5,7 +5,7 @@ import re
 from accelerate.utils import gather_object
 
 # Disable all logging messages at or below INFO level
-logging.disable(logging.INFO)
+logging.disable(logging.WARNING)
 
 import argparse
 import os.path
@@ -233,9 +233,9 @@ def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, u
         scores["NonIntrusive"]["Scoreq"] = metrics["Scoreq"](inf=inf_16k, fs=16000)
         scores["NonIntrusive"]["UTMOS"] = metrics["UTMOS"](inf=inf_16k, sr=16000)
         # stoi, pesq, sdr
-        (scores["NonIntrusive"]["SQUIM_STOI"],
-         scores["NonIntrusive"]["SQUIM_PESQ"],
-         scores["NonIntrusive"]["SQUIM_SDR"]) = metrics["SQUIM"](inf_16k, 16000)
+        (scores["NonIntrusive"]["SQ_STOI"],
+         scores["NonIntrusive"]["SQ_PESQ"],
+         scores["NonIntrusive"]["SQ_SDR"]) = metrics["SQUIM"](inf_16k, 16000)
 
     # Task-dependent metrics
     if args.task_dependent_metrics:
@@ -247,7 +247,7 @@ def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, u
     if args.task_independent_metrics:
         scores["TaskIndependent"] = {}
         scores["TaskIndependent"]["LPS"] = metrics["PhonemeSimilarity"](ref_16k.squeeze(), inf_16k.squeeze(), 16000)
-        scores["TaskIndependent"]["SpeechBERTScore"] = metrics["SpeechBERTScore"](ref_16k, inf_16k, 16000)
+        scores["TaskIndependent"]["SBS"] = metrics["SpeechBERTScore"](ref_16k, inf_16k, 16000)
 
     return scores
 
