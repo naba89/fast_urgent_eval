@@ -5,7 +5,14 @@ Inference script is provided for multi-node/gpu evaluation for URGNENT 2025~ cha
 
 Peak GPU memory usage is around 16-17 GB per GPU for URGENT 2025 nonblind test set.
 
-Evaluation on 1 node 4 A100 GPUs for 1000 utterances takes less than 10 minutes.
+Evaluation on 1 node 4 A100 GPUs for 1000 utterances takes less than 10 minutes, compared to >2hours with the official scripts.
+
+## Key Features
+- Efficient GPU-based implementations for various SE metrics such as STOI and others.
+- Multi-node/GPU support using Huggingface Accelerate for large-scale evaluations.
+- Single audio file reading to minimize I/O overhead.
+- Consolidated resampling to avoid redundant computations.
+- Checked results against official implementations to ensure accuracy within acceptable tolerances (1e-4 or better).
 
 ## Installation
 
