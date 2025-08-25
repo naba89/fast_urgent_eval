@@ -1,4 +1,5 @@
 import logging
+import math
 
 from accelerate.utils import gather_object
 
@@ -8,7 +9,7 @@ logging.disable(logging.INFO)
 import argparse
 import os.path
 import time
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 import torch
 import torchaudio
@@ -30,6 +31,66 @@ from fast_urgent_eval.metrics.task_dependent.speaker_similarity import SpeakerSi
 from fast_urgent_eval.metrics.task_dependent.wer_cer import OWSMEvaluator
 from fast_urgent_eval.metrics.task_independent.phoneme_similarity import LevenshteinPhonemeSimilarity
 from fast_urgent_eval.metrics.task_independent.speech_bert_score import SpeechBERTScore
+
+
+def write_metrics_files(all_gathered, root, accelerator):
+    """Write metrics to disk in the structure requested."""
+    # Only main process does I/O
+    os.makedirs(root, exist_ok=True)
+
+    # Collect: {category: {metric: [(uid, value), ...]}}
+    bucket = {}
+    for item in all_gathered:
+        uid = item["uid"]
+        scores = item["scores"]  # dict of categories
+        for category, cat_dict in scores.items():
+            if not isinstance(cat_dict, dict):
+                continue
+            for metric_name, metric_value in cat_dict.items():
+                bucket.setdefault(category, {}).setdefault(metric_name, []).append((uid, metric_value))
+
+    # Per-category metric files and per-category RESULTS.txt
+    cat_results_lines = {}  # for aggregating into the global RESULTS
+    for category, metrics_map in bucket.items():
+        cat_dir = os.path.join(root, category)
+        os.makedirs(cat_dir, exist_ok=True)
+
+        # Write each metric file: "<uid> <value>"
+        for metric_name, pairs in metrics_map.items():
+            metric_path = os.path.join(cat_dir, f"{metric_name}.txt")
+            # stable order: sort by uid
+            pairs_sorted = sorted(pairs, key=lambda x: x[0])
+            with open(metric_path, "w", encoding="utf-8") as f:
+                for uid, v in pairs_sorted:
+                    f.write(f"{uid} {v:.6f}\n")
+
+        # Compute means and write category RESULTS.txt
+        results_path = os.path.join(cat_dir, "RESULTS.txt")
+        lines = []
+        for metric_name, pairs in sorted(metrics_map.items()):
+            vals = [v for _, v in pairs if not (isinstance(v, float) and (math.isnan(v) or math.isinf(v)))]
+            mean_v = sum(vals) / len(vals) if vals else float("nan")
+            lines.append(f"{metric_name}: {mean_v:.6f}")
+        with open(results_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+
+        cat_results_lines[category] = lines
+
+    # Global RESULTS_<timestamp>.txt with all categories concatenated
+    # Timestamp in local time (Tokyo)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    global_results_path = os.path.join(root, f"RESULTS_{ts}.txt")
+    with open(global_results_path, "w", encoding="utf-8") as f:
+        first = True
+        for category in sorted(cat_results_lines.keys()):
+            if not first:
+                f.write("\n")
+            first = False
+            f.write(f"[{category}]\n")
+            f.write("\n".join(cat_results_lines[category]) + "\n")
+
+    accelerator.print(f"Wrote results to: {root}")
+    accelerator.print(f"Global summary: {global_results_path}")
 
 
 def create_data_pairs(base_dir, ref_scp, inf_scp, ref_text, utt2lang):
@@ -187,12 +248,18 @@ def main(args):
 
     accelerator.wait_for_everyone()
     all_gathered = gather_object(all_local)
-    accelerator.print(all_gathered)
-    accelerator.print(len(all_gathered))
-    # print the uids after gathering
-    all_uids = [item["uid"] for item in all_gathered]
-    accelerator.print("Gathered UIDs:", all_uids)
-    accelerator.print("Original UIDs:", orig_all_uids)
+
+    if accelerator.is_main_process:
+        root_dir = "."
+        write_metrics_files(all_gathered, root=os.path.join(root_dir, "results"), accelerator=accelerator)
+
+
+    # accelerator.print(all_gathered)
+    # accelerator.print(len(all_gathered))
+    # # print the uids after gathering
+    # all_uids = [item["uid"] for item in all_gathered]
+    # accelerator.print("Gathered UIDs:", all_uids)
+    # accelerator.print("Original UIDs:", orig_all_uids)
 
     # if accelerator.is_main_process:
     #     import json
