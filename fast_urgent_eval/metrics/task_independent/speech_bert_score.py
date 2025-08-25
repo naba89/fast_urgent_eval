@@ -38,4 +38,4 @@ class SpeechBERTScore:
         v_gen = self.speech_bert_score.process_feats(gen_wav)
         precision, recall, f1_score = bert_score(v_gen.squeeze(0), v_ref.squeeze(0))
 
-        return precision.item()
+        return precision
