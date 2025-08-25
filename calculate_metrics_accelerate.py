@@ -1,5 +1,6 @@
 import logging
 import math
+import re
 
 from accelerate.utils import gather_object
 
@@ -33,6 +34,11 @@ from fast_urgent_eval.metrics.task_independent.phoneme_similarity import Levensh
 from fast_urgent_eval.metrics.task_independent.speech_bert_score import SpeechBERTScore
 
 
+def _natural_key(s: str):
+    # splits "fileid_10" -> ["fileid_", 10, ""], so sort is human-friendly
+    return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", s)]
+
+
 def write_metrics_files(all_gathered, root, accelerator):
     """Write metrics to disk in the structure requested."""
     # Only main process does I/O
@@ -59,10 +65,16 @@ def write_metrics_files(all_gathered, root, accelerator):
         for metric_name, pairs in metrics_map.items():
             metric_path = os.path.join(cat_dir, f"{metric_name}.txt")
             # stable order: sort by uid
-            pairs_sorted = sorted(pairs, key=lambda x: x[0])
+            pairs_sorted = sorted(pairs, key=lambda x: _natural_key(x[0]))  # natural UID sort
+
+            uid_width = max(len(uid) for uid, _ in pairs_sorted) if pairs_sorted else 0
             with open(metric_path, "w", encoding="utf-8") as f:
                 for uid, v in pairs_sorted:
-                    f.write(f"{uid} {v:.6f}\n")
+                    if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                        val = "nan"
+                        f.write(f"{uid:<{uid_width}}  {val}\n")
+                    else:
+                        f.write(f"{uid:<{uid_width}}  {v:.6f}\n")
 
         # Compute means and write category RESULTS.txt
         results_path = os.path.join(cat_dir, "RESULTS.txt")
@@ -252,21 +264,6 @@ def main(args):
     if accelerator.is_main_process:
         root_dir = "."
         write_metrics_files(all_gathered, root=os.path.join(root_dir, "results"), accelerator=accelerator)
-
-
-    # accelerator.print(all_gathered)
-    # accelerator.print(len(all_gathered))
-    # # print the uids after gathering
-    # all_uids = [item["uid"] for item in all_gathered]
-    # accelerator.print("Gathered UIDs:", all_uids)
-    # accelerator.print("Original UIDs:", orig_all_uids)
-
-    # if accelerator.is_main_process:
-    #     import json
-    #     out_file =  "metrics.json"
-    #     with open(out_file, "w") as f:
-    #         json.dump(scores, f, indent=4)
-    #     print(f"Metrics saved to {out_file}", flush=True)
 
 
 if __name__ == '__main__':
