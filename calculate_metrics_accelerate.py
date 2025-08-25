@@ -171,6 +171,7 @@ def main(args):
 
     metrics = setup_metrics(device, args)
 
+    all_local = []
     with accelerator.split_between_processes(data_pairs, apply_padding=False) as split_data_pairs:
         print(f"Processing {len(split_data_pairs)} data pairs on device {device}", flush=True)
 
@@ -181,15 +182,17 @@ def main(args):
 
             scores = compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, uid, device)
 
+            all_local.append({"uid": uid, "scores": scores})
+
     accelerator.wait_for_everyone()
-    scores = gather_object(scores)
-    accelerator.print(scores)
-    if accelerator.is_main_process:
-        import json
-        out_file =  "metrics.json"
-        with open(out_file, "w") as f:
-            json.dump(scores, f, indent=4)
-        print(f"Metrics saved to {out_file}", flush=True)
+    all_gathered = gather_object(all_local)
+    accelerator.print(all_gathered)
+    # if accelerator.is_main_process:
+    #     import json
+    #     out_file =  "metrics.json"
+    #     with open(out_file, "w") as f:
+    #         json.dump(scores, f, indent=4)
+    #     print(f"Metrics saved to {out_file}", flush=True)
 
 
 if __name__ == '__main__':
