@@ -162,6 +162,7 @@ def main(args):
 
     # debug
     data_pairs = data_pairs[:21]  # test odd number of samples
+    orig_all_uids = [uid for uid, _, _, _, _ in data_pairs]
 
     process_group_kwargs = InitProcessGroupKwargs(timeout=timedelta(seconds=36000))  # 10 hours
     accelerator = Accelerator(kwargs_handlers=[process_group_kwargs])
@@ -186,7 +187,12 @@ def main(args):
 
     accelerator.wait_for_everyone()
     all_gathered = gather_object(all_local)
-    accelerator.print(all_gathered)
+    accelerator.print(len(all_gathered))
+    # print the uids after gathering
+    all_uids = [item["uid"] for item in all_gathered]
+    accelerator.print("Gathered UIDs:", all_uids)
+    accelerator.print("Original UIDs:", orig_all_uids)
+
     # if accelerator.is_main_process:
     #     import json
     #     out_file =  "metrics.json"
