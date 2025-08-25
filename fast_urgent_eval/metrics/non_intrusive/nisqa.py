@@ -1077,7 +1077,7 @@ class NISQA_DIM_MOS(nn.Module):
         n_mels = args["ms_n_mels"]
         fmax = args["ms_fmax"]
 
-        self.valid_srs = [16000, 22050, 24000, 32000, 44100, 48000]
+        self.valid_srs = [8000, 16000, 22050, 24000, 32000, 44100, 48000]
         self.mel_specs = nn.ModuleDict()
         for sr in self.valid_srs:
             hop_length = int(args["ms_hop_length"] * sr)
