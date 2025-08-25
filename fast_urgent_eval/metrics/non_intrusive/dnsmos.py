@@ -24,9 +24,9 @@ class DNSMOS(nn.Module):
         )
 
     @torch.inference_mode()
-    def forward(self, x, fs):
+    def forward(self, inf, fs):
         assert fs == SAMPLING_RATE, f"Sampling rate must be {SAMPLING_RATE}, but got {fs}"
-        dnsmos_score = self.model(x, fs)['OVRL']
+        dnsmos_score = self.model(inf, fs)['OVRL']
         return float(dnsmos_score)
 
 
