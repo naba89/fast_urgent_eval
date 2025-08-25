@@ -44,7 +44,8 @@ class SpeakerSimilarity(nn.Module):
         else:
             similarity = F.l1_loss(inf_emb, ref_emb)
 
-        return similarity
+        similarity = similarity.mean()
+        return similarity.item()
 
 
 class SpeakerSimilarityWavLM(nn.Module):
@@ -80,7 +81,8 @@ class SpeakerSimilarityWavLM(nn.Module):
         else:
             similarity = F.l1_loss(inf_emb, ref_emb)
 
-        return similarity
+        similarity = similarity.mean()
+        return similarity.item()
 
 
 class SpeakerSimilarityEcapa2(nn.Module):
@@ -116,6 +118,7 @@ class SpeakerSimilarityEcapa2(nn.Module):
         else:
             similarity = F.l1_loss(inf_emb, ref_emb)
 
+        similarity = similarity.mean()
         return similarity
 
 

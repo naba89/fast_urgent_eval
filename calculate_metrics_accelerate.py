@@ -240,13 +240,13 @@ def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, u
     # Task-dependent metrics
     if args.task_dependent_metrics:
         scores["TaskDependent"] = {}
-        scores["TaskDependent"]["SpeakerSimilarity"] = metrics["SpeakerSimilarity"](ref=ref_16k, inf=inf_16k, fs=16000)
-        scores["TaskDependent"]["WER_CER"] = metrics["WER_CER"](audio=inf_16k, ref_text=ref_txt,
-                                                                     sr=16000, lang_id=lang_id, uid=uid)
+        scores["TaskDependent"]["SpkSim"] = metrics["SpeakerSimilarity"](ref=ref_16k, inf=inf_16k, fs=16000)
+        scores["TaskDependent"]["CAcc"] = metrics["WER_CER"](audio=inf_16k, ref_text=ref_txt,
+                                                                     sr=16000, lang_id=lang_id, uid=uid).CAcc
     # Task-independent metrics
     if args.task_independent_metrics:
         scores["TaskIndependent"] = {}
-        scores["TaskIndependent"]["PhonemeSimilarity"] = metrics["PhonemeSimilarity"](ref_16k.squeeze(), inf_16k.squeeze(), 16000)
+        scores["TaskIndependent"]["LPS"] = metrics["PhonemeSimilarity"](ref_16k.squeeze(), inf_16k.squeeze(), 16000)
         scores["TaskIndependent"]["SpeechBERTScore"] = metrics["SpeechBERTScore"](ref_16k, inf_16k, 16000)
 
     return scores
