@@ -39,3 +39,5 @@ openai-whisper==20250625
 # Removed pypesq dependency as we do not use it and it sometimes cause a problem when installing
 https://github.com/ludlows/python-pesq/archive/master.zip
 git+https://github.com/kohei0209/DiscreteSpeechMetrics.git@mhubert_wo_pypesq
+
+-e .

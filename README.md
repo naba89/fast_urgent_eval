@@ -13,7 +13,6 @@ Evaluation on 1 node 4 A100 GPUs for 1000 utterances takes less than 10 minutes.
 conda env create -f environment.yml
 conda activate fast_urgent_eval
 pip install -r requirements.txt
-pip install -e .
 ```
 
 
