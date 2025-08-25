@@ -6,7 +6,8 @@ import torch
 import torch.nn.functional as F
 import torchaudio.functional
 from pystoi import stoi
-from pystoi.utils import resample_oct
+from pystoi.utils import resample_oct, _resample_window_oct
+from scipy.signal import firwin
 
 # =========================
 # Constants (match reference)
@@ -27,6 +28,176 @@ _DEFAULT_DTYPE = torch.float32
 # =========================
 # Utilities
 # =========================
+
+
+def resample_poly_pytorch(
+        x: torch.Tensor,
+        up: int,
+        down: int,
+        axis: int = -1,
+        window=('kaiser', 5.0),
+) -> torch.Tensor:
+    """
+    Resamples a tensor `x` along a given axis using polyphase filtering in PyTorch.
+
+    The function upsamples the signal by `up`, applies a zero-phase low-pass FIR filter,
+    and then downsamples by `down`. The output sample rate is `up / down` times the input.
+
+    This implementation is a PyTorch-based equivalent of `scipy.signal.resample_poly`.
+
+    Parameters
+    ----------
+    x : torch.Tensor
+        The data to be resampled.
+    up : int
+        The upsampling factor.
+    down : int
+        The downsampling factor.
+    axis : int, optional
+        The axis of `x` that is resampled. Defaults to -1.
+    window : string, tuple, or torch.Tensor, optional
+        The window to use for designing the FIR filter, or the filter coefficients
+        themselves. See `scipy.signal.firwin` for details. Defaults to ('kaiser', 5.0).
+
+    Returns
+    -------
+    torch.Tensor
+        The resampled tensor.
+    """
+    if not isinstance(x, torch.Tensor):
+        raise TypeError("Input 'x' must be a torch.Tensor.")
+    if up <= 0 or down <= 0 or up != int(up) or down != int(down):
+        raise ValueError("upsampling and downsampling factors must be positive integers.")
+
+    # Simplify the up/down factors
+    g = math.gcd(up, down)
+    up //= g
+    down //= g
+
+    if up == 1 and down == 1:
+        return x.clone()
+
+    # --- 1. FIR Filter Design ---
+    if isinstance(window, torch.Tensor):
+        h = window.to(x)
+        if h.ndim != 1:
+            raise ValueError("Filter window must be a 1D tensor.")
+        half_len = (h.shape[0] - 1) // 2
+    else:
+        raise ValueError("Only torch.Tensor window is supported in this implementation.")
+
+    # Scale filter by upsampling factor
+    h = h * up
+
+    # --- 2. Prepare Tensor for 1D Convolution ---
+    # `conv1d` expects (N, C_in, L_in). We move the target axis to the end
+    # and treat all other dimensions as the batch dimension.
+    if axis != -1 and axis != x.ndim - 1:
+        x = x.transpose(axis, -1)
+
+    original_shape = x.shape
+    # Flatten all dimensions except the last one
+    x_flat = x.reshape(-1, 1, original_shape[-1])
+    n_in = original_shape[-1]
+
+    # --- 3. Polyphase Resampling using Convolution ---
+
+    # This logic matches the alignment and padding of scipy's implementation
+    # to achieve a zero-phase filtering effect.
+    n_pre_pad = (down - half_len % down) % down
+    n_post_pad = 0  # Typically zero, used as a safeguard in scipy
+    h_padded = F.pad(h, (n_pre_pad, n_post_pad))
+    filt_len = h_padded.shape[0]
+
+    # The 'full' convolution output length is L_in + L_filt - 1.
+    # We implement this with padding in conv1d.
+    # The filter needs to be flipped for convolution to act as a filter.
+    h_flipped = torch.flip(h_padded, dims=[-1]).view(1, 1, -1)
+
+    # Upsample by inserting zeros
+    # This can be done efficiently by using a strided transposed convolution,
+    # but a direct approach is clearer and often fast enough.
+    x_up = torch.zeros((x_flat.shape[0], 1, n_in * up), dtype=x.dtype, device=x.device)
+    x_up[..., ::up] = x_flat
+
+    # Convolve and then downsample
+    y = F.conv1d(x_up, h_flipped, padding=filt_len - 1)
+    y_down = y[..., ::down]
+
+    # --- 4. Crop Output to Match SciPy's Alignment and Length ---
+    n_out = (n_in * up) // down + (1 if (n_in * up) % down else 0)
+    n_pre_remove = (half_len + n_pre_pad) // down
+
+    y_cropped = y_down[..., n_pre_remove: n_pre_remove + n_out]
+
+    # --- 5. Reshape and Return ---
+    # Reshape back to original batch dimensions
+    final_shape = list(original_shape)
+    final_shape[-1] = y_cropped.shape[-1]
+    y_final = y_cropped.reshape(final_shape)
+
+    # Transpose axis back to its original position
+    if axis != -1 and axis != x.ndim - 1:
+        y_final = y_final.transpose(axis, -1)
+
+    return y_final
+
+
+class ResampleOctavePyTorch(torch.nn.Module):
+    """
+    A PyTorch module for resampling tensors by a rational factor `p/q`
+    using a filter designed to match Octave's resampling method.
+
+    This module upsamples the signal by `p`, applies a zero-phase low-pass FIR filter,
+    and then downsamples by `q`. The output sample rate is `p / q` times the input.
+
+    Parameters
+    ----------
+    new : int
+        The new sampling frequency (p).
+    dtype : torch.dtype, optional
+        The desired data type for filter computation. Defaults to torch.float64.
+    """
+
+    def __init__(
+        self,
+        new: int = 10000,
+        dtype: torch.dtype = torch.float32,
+    ):
+        super(ResampleOctavePyTorch, self).__init__()
+        self.p = new
+        self.dtype = dtype
+
+        self.valid_orig = [8000, 16_000, 22_050, 24_000, 32_000, 44_100, 48_000]
+
+        for fs in self.valid_orig:
+            h = _resample_window_oct(self.p, fs)
+            window = h / np.sum(h)
+            window = torch.tensor(window, dtype=dtype)
+            self.register_buffer(f'filter_{fs}', window, persistent=False)
+
+
+    def forward(self, x: torch.Tensor, orig_fs: int) -> torch.Tensor:
+        """
+        Resamples the input tensor `x`.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            The data to be resampled.
+        orig_fs : int
+            The original sampling frequency of the input tensor.
+
+        Returns
+        -------
+        torch.Tensor
+            The resampled tensor.
+        """
+        return resample_poly_pytorch(
+            x, self.p, orig_fs, axis=-1,
+            window=getattr(self, f'filter_{orig_fs}'),
+        )
+
 def _eps(dtype=_DEFAULT_DTYPE) -> float:
     return torch.finfo(dtype).eps
 
@@ -219,6 +390,8 @@ class STOI(torch.nn.Module):
         self.register_buffer("OBM", obm, persistent=False)
         self.register_buffer("CF", cf, persistent=False)
 
+        self.resample_fn = ResampleOctavePyTorch(new=fs_internal, dtype=dtype)
+
     @torch.no_grad()
     def forward(self, ref: torch.Tensor, inf: torch.Tensor, fs: int, extended: bool = False, **kwargs):
         """
@@ -227,7 +400,10 @@ class STOI(torch.nn.Module):
         Returns: scalar STOI score
         """
         device = ref.device
-        assert fs == self.fs_internal, f"Expected fs_sig={self.fs_internal}, got {fs}"
+        ref = ref.to(self.dtype)
+        inf = inf.to(self.dtype)
+        ref = self.resample_fn(ref, fs)
+        inf = self.resample_fn(inf, fs)
         assert ref.ndim == 1 and inf.ndim == 1, f"Expected 1-D tensors, got {ref.ndim}D and {inf.ndim}D"
 
         if ref.shape != inf.shape:
@@ -296,20 +472,20 @@ if __name__ == "__main__":
     # Dummy example (white noise vs. same)
     torch.manual_seed(0)
     np.random.seed(0)
-    x = torch.randn(16000, dtype=_DEFAULT_DTYPE)  # 1.6 s at 10 kHz or any fs_sig you pass
-    y = torch.randn(16000, dtype=_DEFAULT_DTYPE)  # Same length, same fs_sig
+    x = torch.randn(44100, dtype=_DEFAULT_DTYPE)  # 1.6 s at 10 kHz or any fs_sig you pass
+    y = torch.randn(44100, dtype=_DEFAULT_DTYPE)  # Same length, same fs_sig
 
-    x_resampled_torch = torchaudio.functional.resample(x, orig_freq=16000, new_freq=10000, resampling_method="sinc_interp_kaiser")
-    y_resampled_torch = torchaudio.functional.resample(y, orig_freq=16000, new_freq=10000, resampling_method="sinc_interp_kaiser")
-
-    x_resampled_oct = resample_oct(x.numpy(), 10000, 16000)
-    y_resampled_oct = resample_oct(y.numpy(), 10000, 16000)
+    # x_resampled_torch = torchaudio.functional.resample(x, orig_freq=16000, new_freq=10000, resampling_method="sinc_interp_kaiser")
+    # y_resampled_torch = torchaudio.functional.resample(y, orig_freq=16000, new_freq=10000, resampling_method="sinc_interp_kaiser")
+    #
+    # x_resampled_oct = resample_oct(x.numpy(), 10000, 16000)
+    # y_resampled_oct = resample_oct(y.numpy(), 10000, 16000)
 
     stoi_torch = STOI(dtype=_DEFAULT_DTYPE, device="cpu")
-    score = stoi_torch(x, y, fs=10000, extended=True)
+    score = stoi_torch(x, y, fs=44100, extended=True)
     print("STOI:", float(score))
 
-    orig_score = stoi(x.numpy(), y.numpy(), fs_sig=10000, extended=True)
+    orig_score = stoi(x.numpy(), y.numpy(), fs_sig=44100, extended=True)
     print("Original STOI (pystoi):", orig_score)
 
     assert math.isclose(float(score), orig_score, rel_tol=1e-5), "STOI scores do not match!"
@@ -319,5 +495,5 @@ if __name__ == "__main__":
     # assert np.allclose(x_resampled_torch.numpy(), x_resampled_oct, atol=1e-2), "Resampling results do not match!"
     # assert np.allclose(y_resampled_torch.numpy(), y_resampled_oct, atol=1e-2), "Resampling results do not match!"
     # print("Resampling results match!")
-    print("Mea n abs diff in resampling (torch vs. oct):", np.mean(np.abs(x_resampled_torch.numpy() - x_resampled_oct)))
-    print("Mea n abs diff in resampling (torch vs. oct):", np.mean(np.abs(y_resampled_torch.numpy() - y_resampled_oct)))
+    # print("Mea n abs diff in resampling (torch vs. oct):", np.mean(np.abs(x_resampled_torch.numpy() - x_resampled_oct)))
+    # print("Mea n abs diff in resampling (torch vs. oct):", np.mean(np.abs(y_resampled_torch.numpy() - y_resampled_oct)))

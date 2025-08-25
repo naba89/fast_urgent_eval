@@ -186,20 +186,22 @@ def main(args):
                 if models["Intrusive"]["STOI"] is not None:
                     start_time = time.time()
                     # needs 10k, so resample to 10khz using either torchaudio or pystoi
-                    if args.resample_oct:
-                        ref_10k = ref_np.squeeze()
-                        inf_10k = inf_np.squeeze()
-                        if ref_sr != 10000:  # for STOI
-                            ref_10k = resample_oct(ref_np, 10000, ref_sr)
-                            inf_10k = resample_oct(inf_np, 10000, inf_sr)
-                        ref_10k = torch.from_numpy(ref_10k).to(device)
-                        inf_10k = torch.from_numpy(inf_10k).to(device)
-                    else:
-                        ref_10k = torchaudio.functional.resample(ref, ref_sr, 10000, resampling_method="sinc_interp_kaiser")
-                        inf_10k = torchaudio.functional.resample(inf, inf_sr, 10000, resampling_method="sinc_interp_kaiser")
+                    # if args.resample_oct:
+                    #     ref_10k = ref_np.squeeze()
+                    #     inf_10k = inf_np.squeeze()
+                    #     if ref_sr != 10000:  # for STOI
+                    #         ref_10k = resample_oct(ref_np, 10000, ref_sr)
+                    #         inf_10k = resample_oct(inf_np, 10000, inf_sr)
+                    #     ref_10k = torch.from_numpy(ref_10k).to(device)
+                    #     inf_10k = torch.from_numpy(inf_10k).to(device)
+                    # else:
+                    #     ref_10k = torchaudio.functional.resample(ref, ref_sr, 10000, resampling_method="sinc_interp_kaiser")
+                    #     inf_10k = torchaudio.functional.resample(inf, inf_sr, 10000, resampling_method="sinc_interp_kaiser")
 
-                    scores["STOI"] = models["Intrusive"]["STOI"](ref=ref_10k.squeeze(), inf=inf_10k.squeeze(),
-                                                                 fs=10000, extended=True)
+                    # scores["STOI"] = models["Intrusive"]["STOI"](ref=ref_10k.squeeze(), inf=inf_10k.squeeze(),
+                    #                                              fs=10000, extended=True)
+                    scores["STOI"] = models["Intrusive"]["STOI"](ref=ref.squeeze(), inf=inf.squeeze(),
+                                                                 fs=ref_sr, extended=True)
                     end_time = time.time()
                     print(f"STOI computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
 
