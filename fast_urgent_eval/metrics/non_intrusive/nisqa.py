@@ -19,6 +19,8 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence
 from torch.nn.utils.rnn import pack_padded_sequence
 
+import librosa as lb
+
 
 class NISQA_DIM(nn.Module):
     '''
@@ -1014,6 +1016,46 @@ def segment_specs3(x, seg_length, seg_hop=1, max_length=None):
     return x, n_wins_gpu, n_wins_cpu
 
 
+def get_librosa_melspec(
+        y,  # np.ndarray
+        sr=48e3,
+        n_fft=1024,
+        hop_length=80,
+        win_length=170,
+        n_mels=32,
+        fmax=16e3,
+):
+    '''
+    Calculate mel-spectrograms with Librosa.
+    '''
+    # Calc spectrogram
+
+    hop_length = int(sr * hop_length)
+    win_length = int(sr * win_length)
+
+    S = lb.feature.melspectrogram(
+        y=y,
+        sr=sr,
+        S=None,
+        n_fft=n_fft,
+        hop_length=hop_length,
+        win_length=win_length,
+        window='hann',
+        center=True,
+        pad_mode='reflect',
+        power=1.0,
+
+        n_mels=n_mels,
+        fmin=0.0,
+        fmax=fmax,
+        htk=False,
+        norm='slaney',
+    )
+
+    spec = lb.core.amplitude_to_db(S, ref=1.0, amin=1e-4, top_db=80.0)
+    return spec
+
+
 this_dir = os.path.dirname(os.path.abspath(__file__))
 NISQA_MODEL_PATH = os.path.join(this_dir, 'nisqa_models', 'nisqa.tar')
 
@@ -1075,52 +1117,38 @@ class NISQA_DIM_MOS(nn.Module):
         )
         self.model = self.model.eval()
 
-        n_fft = args["ms_n_fft"]
-        n_mels = args["ms_n_mels"]
-        fmax = args["ms_fmax"]
-
-        self.valid_srs = [8000, 16000, 22050, 24000, 32000, 44100, 48000]
-        self.mel_specs = nn.ModuleDict()
-        for sr in self.valid_srs:
-            hop_length = int(args["ms_hop_length"] * sr)
-            win_length = int(args["ms_win_length"] * sr)
-            self.mel_specs[str(sr)] = torchaudio.transforms.MelSpectrogram(
-                sample_rate=sr,
-                n_fft=n_fft,
-                win_length=win_length,
-                hop_length=hop_length,
-                n_mels=n_mels,
-                f_max=fmax,
-                center=True,
-                pad_mode="reflect",
-                power=1.0,
-                f_min=0.0,
-                mel_scale="slaney",
-                norm="slaney",
-                normalized=True,
-            )
-
-        amin = 1e-4
-        ref_value = 1.0
-        db_multiplier = math.log10(max(amin, ref_value))
-        self.amp_to_db = partial(torchaudio.functional.amplitude_to_DB, multiplier=20,
-                                 amin=1e-4, db_multiplier=db_multiplier, top_db=80.0)
+        self.ms_n_fft = args["ms_n_fft"]
+        self.ms_hop_length = args["ms_hop_length"]
+        self.ms_win_length = args["ms_win_length"]
+        self.ms_n_mels = args["ms_n_mels"]
+        self.ms_fmax = args["ms_fmax"]
 
         self.seg_length = args["ms_seg_length"]
         self.seg_hop_length = args["ms_seg_hop_length"]
         self.max_segments = args["ms_max_segments"]
 
-        for param in self.model.parameters():
-            param.requires_grad = False
+    @property
+    def device(self):
+        return next(self.model.parameters()).device
 
     @torch.inference_mode()
     def forward(self, inf, fs, **kwargs):
         """
         x: (batch_size, n_samples)
         """
-        assert fs in self.valid_srs, f"fs {fs} not in {self.valid_srs}"
-        mel_spec = self.mel_specs[str(fs)](inf)  # (batch_size, n_mels, n_frames)
-        mel_spec = self.amp_to_db(mel_spec)
+        # assert fs in self.valid_srs, f"fs {fs} not in {self.valid_srs}"
+        # mel_spec = self.mel_specs[str(fs)](inf)  # (batch_size, n_mels, n_frames)
+        # mel_spec = self.amp_to_db(mel_spec)
+        mel_spec = get_librosa_melspec(
+            y=inf,
+            sr=fs,
+            n_fft=self.ms_n_fft,
+            hop_length=self.ms_hop_length,
+            win_length=self.ms_win_length,
+            n_mels=self.ms_n_mels,
+            fmax=self.ms_fmax,
+        )
+        mel_spec = torch.tensor(mel_spec, device=self.device).unsqueeze(0)  # (1, n_mels, n_frames)
         spec_seg, wins, wins_cpu = segment_specs3(x=mel_spec, seg_length=self.seg_length, seg_hop=self.seg_hop_length)
         nisqa_mos = self.model(spec_seg, wins, wins_cpu)[:, 0]
         return nisqa_mos.item()
@@ -1128,7 +1156,6 @@ class NISQA_DIM_MOS(nn.Module):
 
 if __name__ == '__main__':
     model = NISQA_DIM_MOS()
-    x = torch.randn(2, 48000)
+    x = torch.randn(48000).numpy()
     out = model(x, 48000)
     print(out)
-    print(out.shape)
