@@ -161,7 +161,7 @@ def main(args):
     data_pairs = create_data_pairs(args.base_dir, args.ref_scp, args.inf_scp, args.ref_text, args.utt2lang)
 
     # debug
-    data_pairs = data_pairs[:20]
+    data_pairs = data_pairs[:21]  # test odd number of samples
 
     process_group_kwargs = InitProcessGroupKwargs(timeout=timedelta(seconds=36000))  # 10 hours
     accelerator = Accelerator(kwargs_handlers=[process_group_kwargs])

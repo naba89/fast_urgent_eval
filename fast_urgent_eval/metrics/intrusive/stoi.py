@@ -449,7 +449,7 @@ class STOI(torch.nn.Module):
             Yn = row_col_normalize_torch(Y_segs, dtype=self.dtype, device=device)
             # sum(Xn * Yn / N) / bands
             d = torch.sum(Xn * Yn / self.n_ctx_frames) / Xn.shape[0]
-            return d
+            return d.item()
 
         # Normalization constants & normalization
         X_norm = torch.linalg.vector_norm(X_segs, dim=2, keepdim=True)
