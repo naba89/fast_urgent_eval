@@ -18,6 +18,7 @@ espnet==202412
 fastdtw
 fast_bss_eval
 pysptk
+diffsptk
 pystoi
 
 # for calculating the DNSMOS metric

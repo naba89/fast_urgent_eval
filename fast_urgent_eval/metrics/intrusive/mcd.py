@@ -103,7 +103,7 @@ def calculate(
     """Calculate MCD."""
 
     # extract ground truth and converted features
-    start_time= time.time()
+    # start_time= time.time()
     gen_mcep = sptk_extract(
         x=inf_audio,
         fs=fs,
@@ -120,13 +120,13 @@ def calculate(
         mcep_dim=mcep_dim,
         mcep_alpha=mcep_alpha,
     )
-    print("SPTK feature extraction time:", time.time() - start_time)
-    start_time = time.time()
+    # print("SPTK feature extraction time:", time.time() - start_time)
+    # start_time = time.time()
 
     # DTW
     _, path = fastdtw(gen_mcep, gt_mcep, dist=spatial.distance.euclidean)
-    print("DTW time:", time.time() - start_time)
-    start_time = time.time()
+    # print("DTW time:", time.time() - start_time)
+    # start_time = time.time()
     twf = np.array(path).T
     gen_mcep_dtw = gen_mcep[twf[0]]
     gt_mcep_dtw = gt_mcep[twf[1]]
@@ -134,7 +134,7 @@ def calculate(
     # MCD
     diff2sum = np.sum((gen_mcep_dtw - gt_mcep_dtw) ** 2, 1)
     mcd = np.mean(10.0 / np.log(10.0) * np.sqrt(2 * diff2sum), 0)
-    print("MCD calculation time:", time.time() - start_time)
+    # print("MCD calculation time:", time.time() - start_time)
 
     return mcd
 
@@ -190,15 +190,15 @@ class MCDMetric(nn.Module):
         # extract features
         ref = ref.double()
         inf = inf.double()
-        start_time= time.time()
+        # start_time= time.time()
         gen_mcep = self.mcep_fncs[str(fs)](self.stft(inf)).cpu().numpy()
         gt_mcep = self.mcep_fncs[str(fs)](self.stft(ref)).cpu().numpy()
-        print("DiffSPTK feature extraction time:", time.time() - start_time)
-        start_time = time.time()
+        # print("DiffSPTK feature extraction time:", time.time() - start_time)
+        # start_time = time.time()
         # DTW
         _, path = fastdtw(gen_mcep, gt_mcep, dist=spatial.distance.euclidean)
-        print("DTW time:", time.time() - start_time)
-        start_time = time.time()
+        # print("DTW time:", time.time() - start_time)
+        # start_time = time.time()
         twf = np.array(path).T
         gen_mcep_dtw = gen_mcep[twf[0]]
         gt_mcep_dtw = gt_mcep[twf[1]]
@@ -206,7 +206,7 @@ class MCDMetric(nn.Module):
         # MCD
         diff2sum = np.sum((gen_mcep_dtw - gt_mcep_dtw) ** 2, 1)
         mcd = np.mean(10.0 / np.log(10.0) * np.sqrt(2 * diff2sum), 0)
-        print("MCD calculation time:", time.time() - start_time)
+        # print("MCD calculation time:", time.time() - start_time)
 
         return mcd
 

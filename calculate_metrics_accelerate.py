@@ -159,11 +159,11 @@ def main(args):
                     # end_time = time.time()
                     # print(f"LSD computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Intrusive"]["MCD"] is not None:
-                    start_time = time.time()
+                    # start_time = time.time()
                     # requires numpy at original sampling rate
                     scores["MCD"] = models["Intrusive"]["MCD"](ref.squeeze(), inf.squeeze(), ref_sr)
-                    end_time = time.time()
-                    print(f"MCD computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
+                    # end_time = time.time()
+                    # print(f"MCD computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Intrusive"]["PESQ"] is not None:
                     # start_time = time.time()
                     # needs either 8k or 16k
@@ -184,7 +184,7 @@ def main(args):
                     # end_time = time.time()
                     # print(f"SDR computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Intrusive"]["STOI"] is not None:
-                    # start_time = time.time()
+                    start_time = time.time()
                     # needs 10k, so resample to 10khz using either torchaudio or pystoi
                     if args.resample_oct:
                         ref_10k = ref_np.squeeze()
@@ -200,8 +200,8 @@ def main(args):
 
                     scores["STOI"] = models["Intrusive"]["STOI"](ref=ref_10k.squeeze(), inf=inf_10k.squeeze(),
                                                                  fs=10000, extended=True)
-                    # end_time = time.time()
-                    # print(f"STOI computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
+                    end_time = time.time()
+                    print(f"STOI computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
 
             # Non-intrusive metrics
             if args.non_intrusive_metrics:
