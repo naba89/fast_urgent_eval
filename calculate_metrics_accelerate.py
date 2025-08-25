@@ -171,7 +171,7 @@ def setup_metrics(device, args):
 
     # Non-intrusive metrics
     if args.non_intrusive_metrics:
-        metrics["DNSMOS"] = DNSMOS(device.type)
+        metrics["DNSMOS"] = DNSMOS(str(device))
         metrics["NISQA"] = NISQA_DIM_MOS().to(device)
         metrics["Scoreq"] = Scoreq().to(device)
         metrics["UTMOS"] = UTMOS().to(device)
