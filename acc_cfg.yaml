@@ -1,0 +1,6 @@
+compute_environment: LOCAL_MACHINE
+distributed_type: MULTI_GPU
+machine_rank: 0
+num_machines: 1
+num_processes: 4
+main_process_port: 9000
