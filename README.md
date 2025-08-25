@@ -1,7 +1,7 @@
 # fast_urgent_eval
 Fast and efficient implementation of various Speech Enhancement (SE) metrics.
 
-Inference script is provided for streamlined evaluation for URGNENT 2025~ challenge.
+Inference script is provided for multi-node/gpu evaluation for URGNENT 2025~ challenge using Huggingface Accelerate.
 
 Peak GPU memory usage is around 16-17 GB per GPU for URGENT 2025 nonblind test set.
 
