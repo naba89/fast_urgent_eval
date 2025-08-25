@@ -187,6 +187,7 @@ def main(args):
 
     accelerator.wait_for_everyone()
     all_gathered = gather_object(all_local)
+    accelerator.print(all_gathered)
     accelerator.print(len(all_gathered))
     # print the uids after gathering
     all_uids = [item["uid"] for item in all_gathered]
