@@ -472,28 +472,15 @@ if __name__ == "__main__":
     # Dummy example (white noise vs. same)
     torch.manual_seed(0)
     np.random.seed(0)
-    x = torch.randn(44100, dtype=_DEFAULT_DTYPE)  # 1.6 s at 10 kHz or any fs_sig you pass
-    y = torch.randn(44100, dtype=_DEFAULT_DTYPE)  # Same length, same fs_sig
-
-    # x_resampled_torch = torchaudio.functional.resample(x, orig_freq=16000, new_freq=10000, resampling_method="sinc_interp_kaiser")
-    # y_resampled_torch = torchaudio.functional.resample(y, orig_freq=16000, new_freq=10000, resampling_method="sinc_interp_kaiser")
-    #
-    # x_resampled_oct = resample_oct(x.numpy(), 10000, 16000)
-    # y_resampled_oct = resample_oct(y.numpy(), 10000, 16000)
+    x = torch.randn(16000, dtype=_DEFAULT_DTYPE)  # 1.6 s at 10 kHz or any fs_sig you pass
+    y = torch.randn(16000, dtype=_DEFAULT_DTYPE)  # Same length, same fs_sig
 
     stoi_torch = STOI(dtype=_DEFAULT_DTYPE, device="cpu")
-    score = stoi_torch(x, y, fs=44100, extended=True)
+    score = stoi_torch(x, y, fs=16000, extended=True)
     print("STOI:", float(score))
 
-    orig_score = stoi(x.numpy(), y.numpy(), fs_sig=44100, extended=True)
+    orig_score = stoi(x.numpy(), y.numpy(), fs_sig=16000, extended=True)
     print("Original STOI (pystoi):", orig_score)
 
     assert math.isclose(float(score), orig_score, rel_tol=1e-5), "STOI scores do not match!"
     print("STOI scores match!")
-
-    # Check resampling matches
-    # assert np.allclose(x_resampled_torch.numpy(), x_resampled_oct, atol=1e-2), "Resampling results do not match!"
-    # assert np.allclose(y_resampled_torch.numpy(), y_resampled_oct, atol=1e-2), "Resampling results do not match!"
-    # print("Resampling results match!")
-    # print("Mea n abs diff in resampling (torch vs. oct):", np.mean(np.abs(x_resampled_torch.numpy() - x_resampled_oct)))
-    # print("Mea n abs diff in resampling (torch vs. oct):", np.mean(np.abs(y_resampled_torch.numpy() - y_resampled_oct)))

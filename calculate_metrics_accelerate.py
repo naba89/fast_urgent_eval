@@ -184,7 +184,7 @@ def main(args):
                     # end_time = time.time()
                     # print(f"SDR computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
                 if models["Intrusive"]["STOI"] is not None:
-                    start_time = time.time()
+                    # start_time = time.time()
                     # needs 10k, so resample to 10khz using either torchaudio or pystoi
                     # if args.resample_oct:
                     #     ref_10k = ref_np.squeeze()
@@ -202,8 +202,8 @@ def main(args):
                     #                                              fs=10000, extended=True)
                     scores["STOI"] = models["Intrusive"]["STOI"](ref=ref.squeeze(), inf=inf.squeeze(),
                                                                  fs=ref_sr, extended=True)
-                    end_time = time.time()
-                    print(f"STOI computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
+                    # end_time = time.time()
+                    # print(f"STOI computation time for {uid}: {end_time - start_time:.2f} seconds", flush=True)
 
             # Non-intrusive metrics
             if args.non_intrusive_metrics:
