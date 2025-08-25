@@ -236,7 +236,7 @@ def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, u
     if args.non_intrusive_metrics:
         scores["NonIntrusive"] = {}
         scores["NonIntrusive"]["DNSMOS"] = metrics["DNSMOS"](inf=inf_16k, fs=16000)
-        scores["NonIntrusive"]["NISQA"] = metrics["NISQA"](inf=inf_48k, fs=48000)
+        scores["NonIntrusive"]["NISQA"] = metrics["NISQA"](inf=inf, fs=inf_sr)
         scores["NonIntrusive"]["Scoreq"] = metrics["Scoreq"](inf=inf_16k, fs=16000)
         scores["NonIntrusive"]["UTMOS"] = metrics["UTMOS"](inf=inf, sr=inf_sr)
         # stoi, pesq, sdr
