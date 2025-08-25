@@ -9,6 +9,7 @@ logging.disable(logging.WARNING)
 
 import argparse
 import os.path
+import soxr
 import time
 from datetime import timedelta, datetime
 
@@ -197,12 +198,18 @@ def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, u
     ref_np = ref.numpy()
     inf_np = inf.numpy()
 
+    # resample once, since 16khz is needed by many metrics, use soxr for quality
+    ref_16k = soxr.resample(ref_np, ref_sr, 16000)
+    inf_16k = soxr.resample(inf_np, inf_sr, 16000)
+
+    inf_48k = soxr.resample(inf_np, inf_sr, 48000)
+
+    ref_16k = torch.from_numpy(ref_16k).to(device)
+    inf_16k = torch.from_numpy(inf_16k).to(device)
+    inf_48k = torch.from_numpy(inf_48k).to(device)
+
     ref = ref.to(device)
     inf = inf.to(device)
-
-    # resample once, since 16khz is needed by many metrics
-    ref_16k = torchaudio.functional.resample(ref, ref_sr, 16000)
-    inf_16k = torchaudio.functional.resample(inf, inf_sr, 16000)
 
     scores = {}
     # Intrusive metrics
@@ -229,7 +236,7 @@ def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, u
     if args.non_intrusive_metrics:
         scores["NonIntrusive"] = {}
         scores["NonIntrusive"]["DNSMOS"] = metrics["DNSMOS"](inf=inf_16k, fs=16000)
-        scores["NonIntrusive"]["NISQA"] = metrics["NISQA"](inf=inf, fs=inf_sr)
+        scores["NonIntrusive"]["NISQA"] = metrics["NISQA"](inf=inf_48k, fs=48000)
         scores["NonIntrusive"]["Scoreq"] = metrics["Scoreq"](inf=inf_16k, fs=16000)
         scores["NonIntrusive"]["UTMOS"] = metrics["UTMOS"](inf=inf_16k, sr=16000)
         # stoi, pesq, sdr

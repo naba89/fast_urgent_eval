@@ -95,3 +95,5 @@ if __name__ == "__main__":
     print(f"LSD (module): {lsd_value_module}")
 
     print("Difference:", abs(lsd_value - lsd_value_module))
+    assert abs(lsd_value - lsd_value_module) < 1e-5, "The implementations do not match!"
+    print("The implementations match!")

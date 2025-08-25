@@ -235,3 +235,7 @@ if __name__ == "__main__":
     print(mcd_sptk)
 
     print("Difference:", abs(mcd - mcd_sptk))
+    assert abs(mcd - mcd_sptk) < 1e-3, "The implementations do not match!"
+    # Note that the results may differ slightly depending on some parameter mismatches
+    # such as n_iter in MelCepstralAnalysis. But the difference should be small enough (<1e-3).
+
