@@ -1,4 +1,4 @@
-# fast_urgent_eval
+# Fast Speech Enhancement Evaluation for URGENT Challenge
 Fast and efficient implementation of various Speech Enhancement (SE) metrics.
 
 Inference script is provided for multi-node/gpu evaluation for URGNENT 2025~ challenge using Huggingface Accelerate.
@@ -65,7 +65,7 @@ Be sure specify the correct scps and paths according to your setup and test/vali
 File ids in the `inf_scp` and `ref_scp` should match.
 
 ## Python Usage of Individual Metrics
-Check the `setup_metrics` and `compute_metrics` functions in calculate_metrics_accelerate.py for examples of how to use individual metrics.
+Check the `setup_metrics` and `compute_metrics` functions in `calculate_metrics_accelerate.py` for examples of how to use individual metrics.
 
 ## Citation
 Implementations are based on the official URGNET 2025 evaluation recipe and various open-source repositories.
