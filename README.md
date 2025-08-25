@@ -29,7 +29,7 @@ Additional metrics will be added in the future as needed.
 ```bash
 # Single GPU
 python calculate_metrics_accelerate.py \
-    --inf_scp <path to your enhanced_scp, with abosulte audio paths> \
+    --inf_scp <path to your enhanced_scp, with fileids and abosulte audio paths> \
     --output_dir <path to save the scores> \
     --base_dir <base dir of the urgent challenge, e.g. ~/urgent2025_challenge/> \
     --ref_scp <path to your ref_scp, relative to base_dir, audio paths also relative to base_dir> \
@@ -55,6 +55,7 @@ accelerate launch --config_file acc_cfg.yaml calculate_metrics_accelerate.py \
 ```
 
 Be sure specify the correct scps and paths according to your setup and test/valid sets.
+File ids in the `inf_scp` and `ref_scp` should match.
 
 ## Python Usage of Individual Metrics
 Check the `setup_metrics` and `compute_metrics` functions in calculate_metrics_accelerate.py for examples of how to use individual metrics.
