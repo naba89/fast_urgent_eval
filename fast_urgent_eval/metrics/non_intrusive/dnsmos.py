@@ -1,3 +1,5 @@
+# Based on https://github.com/urgent-challenge/urgent2025_challenge/blob/main/evaluation_metrics
+
 import os
 
 import torch
@@ -27,10 +29,3 @@ class DNSMOS(nn.Module):
         assert fs == SAMPLING_RATE, f"Sampling rate must be {SAMPLING_RATE}, but got {fs}"
         dnsmos_score = self.model(inf, fs)['OVRL']
         return float(dnsmos_score)
-
-
-if __name__ == '__main__':
-    model = DNSMOS()
-    dummy_inp = torch.randn(1, 16000)
-    score = model(dummy_inp, 16000)
-    print(score)

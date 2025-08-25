@@ -1,3 +1,13 @@
+"""
+Calculate various speech quality metrics using Hugging Face Accelerate for distributed processing.
+Supports intrusive, non-intrusive, task-dependent, and task-independent metrics.
+
+Specifically designed for the URGENT Challenge evaluation to be fast and efficient.
+
+Author: Nabarun Goswami, University of Tokyo
+Email: nabarungoswami@mi.t.u-tokyo.ac.jp
+"""
+
 import logging
 import math
 import re

@@ -1,14 +1,14 @@
-
+--index-url https://download.pytorch.org/whl/cu121
+torch==2.5.1
+torchaudio==2.5.1
 espnet_model_zoo
 librosa
-numpy
+numpy<2
 scipy
-samplerate
-soundfile
 soxr
 transformers
+accelerate
 tqdm
-webrtcvad
 
 fairseq
 
@@ -17,7 +17,6 @@ espnet==202412
 # for calculating intrusive SE metrics
 fastdtw
 fast_bss_eval
-pysptk
 diffsptk
 pystoi
 
@@ -35,5 +34,5 @@ openai-whisper
 # for SpeechBERTScore metric
 # install a fork which supoprts multilingual SSL (MHuBERT-147)
 # Removed pypesq dependency as we do not use it and it sometimes cause a problem when installing
-# pip install https://github.com/ludlows/python-pesq/archive/master.zip
+https://github.com/ludlows/python-pesq/archive/master.zip
 git+https://github.com/kohei0209/DiscreteSpeechMetrics.git@mhubert_wo_pypesq

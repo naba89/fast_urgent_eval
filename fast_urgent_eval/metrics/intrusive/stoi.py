@@ -1,3 +1,5 @@
+# Pytorch implementation of STOI (and extended STOI)
+
 import math
 from typing import Tuple
 
@@ -5,7 +7,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import torchaudio.functional
-from pystoi import stoi
 from pystoi.utils import _resample_window_oct
 
 # =========================
@@ -474,28 +475,3 @@ class STOI(torch.nn.Module):
         M_ = Xc.shape[1]
         d = torch.sum(corr) / (J_ * M_)
         return d.item()
-
-
-# =========================
-# Example usage
-# =========================
-if __name__ == "__main__":
-    # Dummy example (white noise vs. same)
-    torch.manual_seed(0)
-    np.random.seed(0)
-    x = torch.randn(48000, dtype=_DEFAULT_DTYPE)  # 1.6 s at 10 kHz or any fs_sig you pass
-    y = torch.randn(48000, dtype=_DEFAULT_DTYPE)  # Same length, same fs_sig
-
-    for fs in [8000, 16000, 22050, 24000, 32000, 44100, 48000]:
-        print(f"\nfs = {fs} Hz")
-         # PyTorch STOI
-        stoi_torch = STOI(dtype=_DEFAULT_DTYPE, device="cpu")
-        score = stoi_torch(x, y, fs=fs, extended=True)
-        print("STOI:", float(score))
-
-        orig_score = stoi(x.numpy(), y.numpy(), fs_sig=fs, extended=True)
-        print("Original STOI (pystoi):", orig_score)
-
-        # assert math.isclose(float(score), orig_score, rel_tol=1e-5), "STOI scores do not match!"
-        # print("STOI scores match!")
-        print("Difference:", abs(float(score) - orig_score))

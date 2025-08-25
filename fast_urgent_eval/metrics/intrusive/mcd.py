@@ -1,73 +1,14 @@
-#!/usr/bin/env python3
+# Based on https://github.com/urgent-challenge/urgent2025_challenge/blob/main/evaluation_metrics
 
-# Copyright 2020 Wen-Chin Huang and Tomoki Hayashi
-#  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
-# ported from https://github.com/espnet/espnet/blob/master/utils/mcd_calculate.py
-
-"""Evaluate MCD between generated and groundtruth audios with SPTK-based mcep."""
+"""Evaluate MCD between generated and groundtruth audios with diff-SPTK-based mcep."""
 from typing import Tuple
 
 import diffsptk
 import numpy as np
-import pysptk
 import torch
 from fastdtw import fastdtw
 from scipy import spatial
 from torch import nn
-
-
-def sptk_extract(
-    x: np.ndarray,
-    fs: int,
-    n_fft: int = 512,
-    n_shift: int = 256,
-    mcep_dim: int = 25,
-    mcep_alpha: float = 0.41,
-    is_padding: bool = False,
-) -> np.ndarray:
-    """Extract SPTK-based mel-cepstrum.
-
-    Args:
-        x (ndarray): 1D waveform array.
-        fs (int): Sampling rate
-        n_fft (int): FFT length in point (default=512).
-        n_shift (int): Shift length in point (default=256).
-        mcep_dim (int): Dimension of mel-cepstrum (default=25).
-        mcep_alpha (float): All pass filter coefficient (default=0.41).
-        is_padding (bool): Whether to pad the end of signal (default=False).
-
-    Returns:
-        ndarray: Mel-cepstrum with the size (N, n_fft).
-
-    """
-    # perform padding
-    if is_padding:
-        n_pad = n_fft - (len(x) - n_fft) % n_shift
-        x = np.pad(x, (0, n_pad), "reflect")
-
-    # get number of frames
-    n_frame = (len(x) - n_fft) // n_shift + 1
-
-    # get window function
-    win = pysptk.sptk.hamming(n_fft)
-
-    # check mcep and alpha
-    if mcep_dim is None or mcep_alpha is None:
-        mcep_dim, mcep_alpha = _get_best_mcep_params(fs)
-
-    # calculate spectrogram
-    mcep = [
-        pysptk.mcep(
-            x[n_shift * i : n_shift * i + n_fft] * win,
-            mcep_dim,
-            mcep_alpha,
-            eps=1e-6,
-            etype=1,
-        )
-        for i in range(n_frame)
-    ]
-
-    return np.stack(mcep)
 
 
 def _get_best_mcep_params(fs: int) -> Tuple[int, float]:
@@ -88,54 +29,6 @@ def _get_best_mcep_params(fs: int) -> Tuple[int, float]:
         return 39, 0.55
     else:
         raise ValueError(f"Not found the setting for {fs}.")
-
-
-def calculate(
-    inf_audio,
-    ref_audio,
-    fs,
-    n_fft=1024,
-    n_shift=256,
-    mcep_dim=None,
-    mcep_alpha=None,
-):
-    """Calculate MCD."""
-
-    # extract ground truth and converted features
-    # start_time= time.time()
-    gen_mcep = sptk_extract(
-        x=inf_audio,
-        fs=fs,
-        n_fft=n_fft,
-        n_shift=n_shift,
-        mcep_dim=mcep_dim,
-        mcep_alpha=mcep_alpha,
-    )
-    gt_mcep = sptk_extract(
-        x=ref_audio,
-        fs=fs,
-        n_fft=n_fft,
-        n_shift=n_shift,
-        mcep_dim=mcep_dim,
-        mcep_alpha=mcep_alpha,
-    )
-    # print("SPTK feature extraction time:", time.time() - start_time)
-    # start_time = time.time()
-
-    # DTW
-    _, path = fastdtw(gen_mcep, gt_mcep, dist=spatial.distance.euclidean)
-    # print("DTW time:", time.time() - start_time)
-    # start_time = time.time()
-    twf = np.array(path).T
-    gen_mcep_dtw = gen_mcep[twf[0]]
-    gt_mcep_dtw = gt_mcep[twf[1]]
-
-    # MCD
-    diff2sum = np.sum((gen_mcep_dtw - gt_mcep_dtw) ** 2, 1)
-    mcd = np.mean(10.0 / np.log(10.0) * np.sqrt(2 * diff2sum), 0)
-    # print("MCD calculation time:", time.time() - start_time)
-
-    return mcd
 
 
 class MCDMetric(nn.Module):
@@ -189,15 +82,12 @@ class MCDMetric(nn.Module):
         # extract features
         ref = ref.double()
         inf = inf.double()
-        # start_time= time.time()
+
         gen_mcep = self.mcep_fncs[str(fs)](self.stft(inf)).cpu().numpy()
         gt_mcep = self.mcep_fncs[str(fs)](self.stft(ref)).cpu().numpy()
-        # print("DiffSPTK feature extraction time:", time.time() - start_time)
-        # start_time = time.time()
+
         # DTW
         _, path = fastdtw(gen_mcep, gt_mcep, dist=spatial.distance.euclidean)
-        # print("DTW time:", time.time() - start_time)
-        # start_time = time.time()
         twf = np.array(path).T
         gen_mcep_dtw = gen_mcep[twf[0]]
         gt_mcep_dtw = gt_mcep[twf[1]]
@@ -205,36 +95,5 @@ class MCDMetric(nn.Module):
         # MCD
         diff2sum = np.sum((gen_mcep_dtw - gt_mcep_dtw) ** 2, 1)
         mcd = np.mean(10.0 / np.log(10.0) * np.sqrt(2 * diff2sum), 0)
-        # print("MCD calculation time:", time.time() - start_time)
 
         return mcd
-
-
-if __name__ == "__main__":
-    fs = 44100
-    # seed
-    torch.manual_seed(0)
-    np.random.seed(0)
-
-    ref = torch.randn(2*fs)
-    inf = ref + 0.01 * torch.randn(2*fs)
-
-    mcd_metric = MCDMetric(n_fft=1024, n_shift=256)
-    mcd = mcd_metric(ref, inf, fs)
-    print(mcd)
-
-    # compare with SPTK
-    mcd_sptk = calculate(
-        inf_audio=inf.numpy(),
-        ref_audio=ref.numpy(),
-        fs=fs,
-        n_fft=1024,
-        n_shift=256,
-    )
-    print(mcd_sptk)
-
-    print("Difference:", abs(mcd - mcd_sptk))
-    assert abs(mcd - mcd_sptk) < 1e-3, "The implementations do not match!"
-    # Note that the results may differ slightly depending on some parameter mismatches
-    # such as n_iter in MelCepstralAnalysis. But the difference should be small enough (<1e-3).
-

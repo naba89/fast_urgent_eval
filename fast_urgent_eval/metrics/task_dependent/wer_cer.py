@@ -294,31 +294,3 @@ def evaluate_batch(
     for audio, sr, ref_text, lang_id, uid in items:
         results.append(evaluator.evaluate(audio, sr, ref_text, lang_id, uid))
     return results
-
-
-if __name__ == "__main__":
-    # Minimal demo (replace with your own loader). No file I/O in the core logic.
-    import soundfile as sf
-
-    _wav_path = "/Users/nabarungoswami/Downloads/1_clean.wav"
-    _ref_text = "They should realize, the chairman wants a deputy he can trust."
-    _lang_id = "none"  # or a specific language ID like "<eng>"
-
-    _audio_np,_sr = sf.read(_wav_path, dtype="float32")
-    _audio = torch.from_numpy(_audio_np)
-    _audio = torchaudio.functional.resample(_audio, _sr, 16000)
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    evaluator = OWSMEvaluator(device=device).to(device)  # or "cpu"
-    res = evaluator(_audio.to(device), 16000, _ref_text, _lang_id, uid="demo-utt")
-
-    print(f"Utterance ID: {res.uid}")
-    print(f"Reference: {res.ref_text}")
-    print(f"Hypothesis: {res.hyp_text}")
-    print(f"WER: {res.WER:.2f}%")
-    print(f"CER: {res.CER:.2f}%")
-    print(f"Word Accuracy: {res.WAcc:.2f}%")
-    print(f"Character Accuracy: {res.CAcc:.2f}%")
-
-    print(f"WER details: {res.WER_details}")
-    print(f"CER details: {res.CER_details}")

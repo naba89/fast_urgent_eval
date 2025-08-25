@@ -1,3 +1,5 @@
+# Based on https://github.com/alessandroragano/scoreq
+# Modified to run on tensors
 import math
 import os
 from urllib.request import urlretrieve

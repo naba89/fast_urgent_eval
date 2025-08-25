@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Gabriel Mittag, TU-Berlin
+Modified by: Nabarun Goswami, UTokyo
 """
 import copy
 import math
@@ -1134,7 +1135,7 @@ class NISQA_DIM_MOS(nn.Module):
         """
         x: (batch_size, n_samples)
         """
-        assert fs == 48000, "Only 48kHz supported"
+        assert fs == 48000, "Only 48kHz supported, resample audio to 48kHz"
         mel_spec = get_librosa_melspec(
             y=inf,
             sr=fs,
@@ -1148,10 +1149,3 @@ class NISQA_DIM_MOS(nn.Module):
         spec_seg, wins, wins_cpu = segment_specs3(x=mel_spec, seg_length=self.seg_length, seg_hop=self.seg_hop_length)
         nisqa_mos = self.model(spec_seg, wins, wins_cpu)[:, 0]
         return nisqa_mos.item()
-
-
-if __name__ == '__main__':
-    model = NISQA_DIM_MOS()
-    x = torch.randn(48000).numpy()
-    out = model(x, 48000)
-    print(out)

@@ -120,11 +120,3 @@ class SpeakerSimilarityEcapa2(nn.Module):
 
         similarity = similarity.mean()
         return similarity
-
-
-if __name__ == '__main__':
-    model = SpeakerSimilarityEcapa2(cosine_similarity=True)
-    dummy_inf = torch.randn(2, 48000)
-    dummy_ref = torch.randn(2, 48000)
-    score = model(dummy_inf, dummy_ref)
-    print(score)
