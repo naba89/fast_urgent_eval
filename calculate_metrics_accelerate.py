@@ -283,6 +283,8 @@ def main(args):
     if accelerator.is_main_process:
         write_metrics_files(all_gathered, root=args.output_dir, accelerator=accelerator)
 
+    accelerator.end_training()
+
 
 if __name__ == '__main__':
     torch.set_float32_matmul_precision("high")
