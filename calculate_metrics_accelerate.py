@@ -123,7 +123,7 @@ def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, u
             sr_pesq = 16000
 
         scores["Intrusive"]["PESQ"] = metrics["PESQ"](ref_pesq.squeeze(), inf_pesq.squeeze(), sr_pesq)
-        scores["Intrusive"]["LSD"] = metrics["LSD"](ref, inf, ref_sr)
+        scores["Intrusive"]["LSD"] = metrics["LSD"](ref.squeeze(), inf.squeeze(), ref_sr)
         scores["Intrusive"]["MCD"] = metrics["MCD"](ref.squeeze(), inf.squeeze(), ref_sr)
         scores["Intrusive"]["SDR"] = metrics["SDR"](ref, inf)
         scores["Intrusive"]["STOI"] = metrics["STOI"](ref=ref.squeeze(),
