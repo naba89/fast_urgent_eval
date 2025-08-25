@@ -160,6 +160,9 @@ def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, u
 def main(args):
     data_pairs = create_data_pairs(args.base_dir, args.ref_scp, args.inf_scp, args.ref_text, args.utt2lang)
 
+    # debug
+    data_pairs = data_pairs[:20]
+
     process_group_kwargs = InitProcessGroupKwargs(timeout=timedelta(seconds=36000))  # 10 hours
     accelerator = Accelerator(kwargs_handlers=[process_group_kwargs])
     device = accelerator.device
@@ -180,9 +183,10 @@ def main(args):
 
     accelerator.wait_for_everyone()
     scores = gather_object(scores)
+    accelerator.print(scores)
     if accelerator.is_main_process:
         import json
-        out_file = os.path.join(args.base_dir, "metrics.json")
+        out_file =  "metrics.json"
         with open(out_file, "w") as f:
             json.dump(scores, f, indent=4)
         print(f"Metrics saved to {out_file}", flush=True)
