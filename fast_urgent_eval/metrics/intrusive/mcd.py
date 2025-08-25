@@ -5,7 +5,6 @@
 # ported from https://github.com/espnet/espnet/blob/master/utils/mcd_calculate.py
 
 """Evaluate MCD between generated and groundtruth audios with SPTK-based mcep."""
-import time
 from typing import Tuple
 
 import diffsptk

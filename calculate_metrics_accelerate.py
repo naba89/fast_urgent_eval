@@ -5,19 +5,17 @@ import re
 from accelerate.utils import gather_object
 
 # Disable all logging messages at or below INFO level
-logging.disable(logging.WARNING)
+logging.disable(logging.INFO)
 
 import argparse
 import os.path
 import soxr
-import time
 from datetime import timedelta, datetime
 
 import torch
 import torchaudio
 import tqdm
 from accelerate import Accelerator, InitProcessGroupKwargs
-from pystoi.utils import resample_oct
 
 from fast_urgent_eval.metrics.intrusive.lsd import LSDMetric
 from fast_urgent_eval.metrics.intrusive.mcd import MCDMetric

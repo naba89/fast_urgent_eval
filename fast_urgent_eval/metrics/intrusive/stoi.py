@@ -6,8 +6,7 @@ import torch
 import torch.nn.functional as F
 import torchaudio.functional
 from pystoi import stoi
-from pystoi.utils import resample_oct, _resample_window_oct
-from scipy.signal import firwin
+from pystoi.utils import _resample_window_oct
 
 # =========================
 # Constants (match reference)

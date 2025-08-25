@@ -3,7 +3,6 @@ import os
 import torch
 import torch.nn as nn
 from espnet2.enh.layers.dnsmos import DNSMOS_local
-from onnx2torch import convert
 
 SAMPLING_RATE = 16000
 INPUT_LENGTH = 9.01
