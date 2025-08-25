@@ -112,58 +112,46 @@ def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, u
     # Intrusive metrics
     if args.intrusive_metrics:
         scores["Intrusive"] = {}
-        if metrics["Intrusive"]["LSD"] is not None:
-            scores["Intrusive"]["LSD"] = metrics["Intrusive"]["LSD"](ref, inf, ref_sr)
-        if metrics["Intrusive"]["MCD"] is not None:
-            scores["Intrusive"]["MCD"] = metrics["Intrusive"]["MCD"](ref.squeeze(), inf.squeeze(), ref_sr)
-        if metrics["Intrusive"]["PESQ"] is not None:
-            if ref_sr == 8000:
-                ref_pesq = ref_np
-                inf_pesq = inf_np
-                sr_pesq = 8000
-            else:
-                ref_pesq = ref_16k.cpu().numpy()
-                inf_pesq = inf_16k.cpu().numpy()
-                sr_pesq = 16000
-            scores["Intrusive"]["PESQ"] = metrics["Intrusive"]["PESQ"](ref_pesq.squeeze(), inf_pesq.squeeze(), sr_pesq)
-        if metrics["Intrusive"]["SDR"] is not None:
-            scores["Intrusive"]["SDR"] = metrics["Intrusive"]["SDR"](ref, inf)
-        if metrics["Intrusive"]["STOI"] is not None:
-            scores["Intrusive"]["STOI"] = metrics["Intrusive"]["STOI"](ref=ref.squeeze(),
+
+        if ref_sr == 8000:
+            ref_pesq = ref_np
+            inf_pesq = inf_np
+            sr_pesq = 8000
+        else:
+            ref_pesq = ref_16k.cpu().numpy()
+            inf_pesq = inf_16k.cpu().numpy()
+            sr_pesq = 16000
+
+        scores["Intrusive"]["PESQ"] = metrics["PESQ"](ref_pesq.squeeze(), inf_pesq.squeeze(), sr_pesq)
+        scores["Intrusive"]["LSD"] = metrics["LSD"](ref, inf, ref_sr)
+        scores["Intrusive"]["MCD"] = metrics["MCD"](ref.squeeze(), inf.squeeze(), ref_sr)
+        scores["Intrusive"]["SDR"] = metrics["SDR"](ref, inf)
+        scores["Intrusive"]["STOI"] = metrics["STOI"](ref=ref.squeeze(),
                                                           inf=inf.squeeze(),
                                                           fs=ref_sr, extended=True)
     # Non-intrusive metrics
     if args.non_intrusive_metrics:
         scores["NonIntrusive"] = {}
-        if metrics["Non-Intrusive"]["DNSMOS"] is not None:
-            scores["NonIntrusive"]["DNSMOS"] = metrics["Non-Intrusive"]["DNSMOS"](inf=inf_16k, fs=16000)
-        if metrics["Non-Intrusive"]["NISQA"] is not None:
-            scores["NonIntrusive"]["NISQA"] = metrics["Non-Intrusive"]["NISQA"](inf=inf, fs=inf_sr)
-        if metrics["Non-Intrusive"]["Scoreq"] is not None:
-            scores["NonIntrusive"]["Scoreq"] = metrics["Non-Intrusive"]["Scoreq"](inf=inf_16k, fs=16000)
-        if metrics["Non-Intrusive"]["UTMOS"] is not None:
-            scores["NonIntrusive"]["UTMOS"] = metrics["Non-Intrusive"]["UTMOS"](inf=inf_16k, sr=16000)
-        if metrics["Non-Intrusive"]["SQUIM"] is not None:
-            # stoi, pesq, sdr
-            (scores["NonIntrusive"]["SQUIM_STOI"],
-             scores["NonIntrusive"]["SQUIM_PESQ"],
-             scores["NonIntrusive"]["SQUIM_SDR"]) = metrics["Non-Intrusive"]["SQUIM"](inf_16k, 16000)
+        scores["NonIntrusive"]["DNSMOS"] = metrics["DNSMOS"](inf=inf_16k, fs=16000)
+        scores["NonIntrusive"]["NISQA"] = metrics["NISQA"](inf=inf, fs=inf_sr)
+        scores["NonIntrusive"]["Scoreq"] = metrics["Scoreq"](inf=inf_16k, fs=16000)
+        scores["NonIntrusive"]["UTMOS"] = metrics["UTMOS"](inf=inf_16k, sr=16000)
+        # stoi, pesq, sdr
+        (scores["NonIntrusive"]["SQUIM_STOI"],
+         scores["NonIntrusive"]["SQUIM_PESQ"],
+         scores["NonIntrusive"]["SQUIM_SDR"]) = metrics["SQUIM"](inf_16k, 16000)
 
     # Task-dependent metrics
     if args.task_dependent_metrics:
         scores["TaskDependent"] = {}
-        if metrics["Task-Dependent"]["SpeakerSimilarity"] is not None:
-            scores["TaskDependent"]["SpeakerSimilarity"] = metrics["Task-Dependent"]["SpeakerSimilarity"](ref=ref_16k, inf=inf_16k, fs=16000)
-        if metrics["Task-Dependent"]["WER_CER"] is not None:
-            scores["TaskDependent"]["WER_CER"] = metrics["Task-Dependent"]["WER_CER"](audio=inf_16k, ref_text=ref_txt,
+        scores["TaskDependent"]["SpeakerSimilarity"] = metrics["SpeakerSimilarity"](ref=ref_16k, inf=inf_16k, fs=16000)
+        scores["TaskDependent"]["WER_CER"] = metrics["WER_CER"](audio=inf_16k, ref_text=ref_txt,
                                                                      sr=16000, lang_id=lang_id, uid=uid)
     # Task-independent metrics
     if args.task_independent_metrics:
         scores["TaskIndependent"] = {}
-        if metrics["Task-Independent"]["PhonemeSimilarity"] is not None:
-            scores["TaskIndependent"]["PhonemeSimilarity"] = metrics["Task-Independent"]["PhonemeSimilarity"](ref_16k.squeeze(), inf_16k.squeeze(), 16000)
-        if metrics["Task-Independent"]["SpeechBERTScore"] is not None:
-            scores["TaskIndependent"]["SpeechBERTScore"] = metrics["Task-Independent"]["SpeechBERTScore"](ref_16k, inf_16k, 16000)
+        scores["TaskIndependent"]["PhonemeSimilarity"] = metrics["PhonemeSimilarity"](ref_16k.squeeze(), inf_16k.squeeze(), 16000)
+        scores["TaskIndependent"]["SpeechBERTScore"] = metrics["SpeechBERTScore"](ref_16k, inf_16k, 16000)
 
     return scores
 
@@ -217,10 +205,10 @@ if __name__ == '__main__':
     parser.add_argument("--utt2lang", type=str,
                         default="/data/umiushi0/users/nabarun/projects/urgent2025/dataprep/urgent2025_challenge/data/nonblind/utt2lang",
                         )
-    parser.add_argument("--intrusive_metrics", action="store_true", default=False)
-    parser.add_argument("--non_intrusive_metrics", action="store_true", default=False)
-    parser.add_argument("--task_dependent_metrics", action="store_true", default=False)
-    parser.add_argument("--task_independent_metrics", action="store_true", default=False)
+    parser.add_argument("--intrusive", action="store_true", default=False)
+    parser.add_argument("--non_intrusive", action="store_true", default=False)
+    parser.add_argument("--task_dependent", action="store_true", default=False)
+    parser.add_argument("--task_independent", action="store_true", default=False)
     args = parser.parse_args()
 
     main(args)
