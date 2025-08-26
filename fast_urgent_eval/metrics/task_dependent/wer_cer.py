@@ -48,12 +48,6 @@ class EvalResult:
 
 class OWSMEvaluator(torch.nn.Module):
     """ASR evaluator as a ``torch.nn.Module`` that accepts **torch.Tensors** directly.
-
-    - Put the module on GPU with ``evaluator.to('cuda')``.
-    - Feed 1-D (T,) float32 tensors (on CPU or GPU). If on GPU, resampling runs on GPU,
-      then audio is moved to CPU *only* at the final step to call ``owsm_predict``
-      (ESPnet's helper expects a NumPy array). The ASR model itself runs on the module's device.
-    - No multiprocessing or dataset I/O—pure core logic.
     """
 
     def __init__(
