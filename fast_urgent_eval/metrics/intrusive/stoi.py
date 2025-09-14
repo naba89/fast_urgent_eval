@@ -177,7 +177,7 @@ class ResampleOctavePyTorch(torch.nn.Module):
             self.register_buffer(f'filter_{fs}', window, persistent=False)
 
         # These cases cause severe slowdown due to large filter sizes due to small gcd
-        # We handle them by first resampling to closest frequency with larger gcd using torchaudio
+        # We handle them by first resampling to the closest frequency with larger gcd using torchaudio
         self.special_freqs = {
             22050: 24_000,
             44100: 48_000,

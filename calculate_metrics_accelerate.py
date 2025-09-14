@@ -143,7 +143,6 @@ def create_data_pairs(base_dir, ref_scp, inf_scp, ref_text, utt2lang):
     language_id = {}
 
     ref_scp = os.path.join(base_dir, ref_scp)
-    inf_scp = os.path.join(base_dir, inf_scp)
     ref_text = os.path.join(base_dir, ref_text)
     utt2lang = os.path.join(base_dir, utt2lang)
 
