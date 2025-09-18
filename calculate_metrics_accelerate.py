@@ -136,6 +136,12 @@ def write_metrics_files(all_gathered, root, accelerator):
     accelerator.print(f"Wrote results to: {root}")
     accelerator.print(f"Global summary: {global_results_path}")
 
+    # Also print to stdout
+    with open(global_results_path, "r", encoding="utf-8") as f:
+        content = f.read()
+        print("=== Overall Results ===")
+        print(content)
+
 
 def create_data_pairs(base_dir, ref_scp, inf_scp, ref_text, utt2lang):
     refs = {}
