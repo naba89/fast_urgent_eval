@@ -275,7 +275,7 @@ def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, u
         scores["TaskDependent"]["CAcc"] = metrics["WER_CER"](audio=inf_16k, ref_text=ref_txt,
                                                                      sr=16000, lang_id=lang_id, uid=uid).CAcc
     # Task-independent metrics
-    if args.task_independent_metrics:
+    if args.task_independent_metrics and ref is not None:
         scores["TaskIndependent"] = {}
         scores["TaskIndependent"]["LPS"] = metrics["PhonemeSimilarity"](ref_16k.squeeze(), inf_16k.squeeze(), 16000)
         scores["TaskIndependent"]["SBS"] = metrics["SpeechBERTScore"](ref_16k, inf_16k, 16000)
