@@ -148,31 +148,42 @@ def create_data_pairs(base_dir, ref_scp, inf_scp, ref_text, utt2lang):
     transcripts = {}
     language_id = {}
 
-    ref_scp = os.path.join(base_dir, ref_scp)
-    ref_text = os.path.join(base_dir, ref_text)
-    utt2lang = os.path.join(base_dir, utt2lang)
+    if ref_scp is not None and ref_text is not None and utt2lang is not None:
+        ref_scp = os.path.join(base_dir, ref_scp)
+        ref_text = os.path.join(base_dir, ref_text)
+        utt2lang = os.path.join(base_dir, utt2lang)
 
-    with open(ref_scp, "r") as f:
-        for line in f:
-            uid, audio_path = line.strip().split()
-            refs[uid] = os.path.join(base_dir, audio_path)
+        with open(ref_scp, "r") as f:
+            for line in f:
+                uid, audio_path = line.strip().split()
+                refs[uid] = os.path.join(base_dir, audio_path)
 
-    with open(ref_text, "r") as f:
-        for line in f:
-            uid, txt = line.strip().split(maxsplit=1)
-            transcripts[uid] = txt
+        with open(ref_text, "r") as f:
+            for line in f:
+                uid, txt = line.strip().split(maxsplit=1)
+                transcripts[uid] = txt
 
-    with open(utt2lang, "r") as f:
-        for line in f:
-            uid, lang_id = line.strip().split(maxsplit=1)
-            assert uid in transcripts, uid
-            language_id[uid] = lang_id
+        with open(utt2lang, "r") as f:
+            for line in f:
+                uid, lang_id = line.strip().split(maxsplit=1)
+                assert uid in transcripts, uid
+                language_id[uid] = lang_id
+    else:
+        refs = None
+        transcripts = None
+        language_id = None
 
     data_pairs = []
     with open(inf_scp, "r") as f:
         for line in f:
             uid, audio_path = line.strip().split()
-            data_pairs.append((uid, transcripts[uid], audio_path, language_id[uid], refs[uid]))
+            if refs is None:
+                data_pairs.append((uid, None, audio_path, None, None))
+            else:
+                assert uid in refs, f"UID {uid} not found in reference SCP."
+                assert uid in transcripts, f"UID {uid} not found in reference text."
+                assert uid in language_id, f"UID {uid} not found in utt2lang."
+                data_pairs.append((uid, transcripts[uid], audio_path, language_id[uid], refs[uid]))
 
     return data_pairs
 
@@ -210,27 +221,23 @@ def setup_metrics(device, args):
 
 def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, uid, device):
 
-    assert ref_sr == inf_sr, f"Sampling rate mismatch for {uid}: {ref_sr} vs {inf_sr}"
-    assert ref.shape == inf.shape, f"Shape mismatch for {uid}: {ref.shape} vs {inf.shape}"
+    if ref is not None:
+        assert ref_sr == inf_sr, f"Sampling rate mismatch for {uid}: {ref_sr} vs {inf_sr}"
+        assert ref.shape == inf.shape, f"Shape mismatch for {uid}: {ref.shape} vs {inf.shape}"
+        ref_np = ref.numpy().squeeze()
+        ref_16k_np = soxr.resample(ref_np, ref_sr, 16000)
+        ref_16k = torch.from_numpy(ref_16k_np).to(device).unsqueeze(0)
+        ref = ref.to(device)
 
-    ref_np = ref.numpy().squeeze()
     inf_np = inf.numpy().squeeze()
-
-    # resample once, since 16khz is needed by many metrics, use soxr for quality
-    ref_16k_np = soxr.resample(ref_np, ref_sr, 16000)
     inf_16k_np = soxr.resample(inf_np, inf_sr, 16000)
-
     inf_48k = soxr.resample(inf_np, inf_sr, 48000)
-
-    ref_16k = torch.from_numpy(ref_16k_np).to(device).unsqueeze(0)
     inf_16k = torch.from_numpy(inf_16k_np).to(device).unsqueeze(0)
-
-    ref = ref.to(device)
     inf = inf.to(device)
 
     scores = {}
     # Intrusive metrics
-    if args.intrusive_metrics:
+    if args.intrusive_metrics and ref is not None:
         scores["Intrusive"] = {}
 
         if ref_sr == 8000:
@@ -262,7 +269,7 @@ def compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, u
          scores["NonIntrusive"]["SQ_SDR"]) = metrics["SQUIM"](inf_16k, 16000)
 
     # Task-dependent metrics
-    if args.task_dependent_metrics:
+    if args.task_dependent_metrics and ref is not None:
         scores["TaskDependent"] = {}
         scores["TaskDependent"]["SpkSim"] = metrics["SpeakerSimilarity"](ref=ref_16k, inf=inf_16k, fs=16000)
         scores["TaskDependent"]["CAcc"] = metrics["WER_CER"](audio=inf_16k, ref_text=ref_txt,
@@ -294,7 +301,10 @@ def main(args):
 
         for uid, ref_txt, inf_audio, lang_id, ref_audio in tqdm.tqdm(split_data_pairs,
                                                                      disable=not accelerator.is_local_main_process):
-            ref, ref_sr = torchaudio.load(ref_audio)
+            if ref_audio is not None:
+                ref, ref_sr = torchaudio.load(ref_audio)
+            else:
+                ref = ref_sr = None
             inf, inf_sr = torchaudio.load(inf_audio)
 
             scores = compute_metrics(args, metrics, ref, inf, ref_sr, inf_sr, ref_txt, lang_id, uid, device)
