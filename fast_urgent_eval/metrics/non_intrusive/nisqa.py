@@ -1135,7 +1135,6 @@ class NISQA_DIM_MOS(nn.Module):
         """
         x: (batch_size, n_samples)
         """
-        assert fs == 48000, "Only 48kHz supported, resample audio to 48kHz"
         mel_spec = get_librosa_melspec(
             y=inf,
             sr=fs,
