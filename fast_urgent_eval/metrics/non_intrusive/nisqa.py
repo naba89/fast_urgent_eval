@@ -1144,7 +1144,7 @@ class NISQA_DIM_MOS(nn.Module):
             n_mels=self.ms_n_mels,
             fmax=self.ms_fmax,
         )
-        mel_spec = torch.tensor(mel_spec, device=self.device).unsqueeze(0)  # (1, n_mels, n_frames)
+        mel_spec = torch.tensor(mel_spec, device=self.device)  # (1, n_mels, n_frames)
         spec_seg, wins, wins_cpu = segment_specs3(x=mel_spec, seg_length=self.seg_length, seg_hop=self.seg_hop_length)
         nisqa_mos = self.model(spec_seg, wins, wins_cpu)[:, 0]
-        return nisqa_mos.item()
+        return nisqa_mos.item() if nisqa_mos.numel() == 1 else nisqa_mos
