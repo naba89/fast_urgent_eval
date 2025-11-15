@@ -11,6 +11,6 @@ class UTMOS(nn.Module):
 
     @torch.inference_mode()
     def forward(self, inf, sr, **kwargs):
-        """wave-to-score :: (B, T) -> float """
+        """wave-to-score :: (B, T) -> float or (B,)"""
         utter_score = self.utmos_model(inf, sr)
-        return utter_score.mean().item()
+        return utter_score.mean().item() if utter_score.numel() == 1 else utter_score

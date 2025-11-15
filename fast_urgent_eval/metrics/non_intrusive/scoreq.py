@@ -181,14 +181,14 @@ class Scoreq(nn.Module):
 
         with torch.no_grad():
             if self.mode == 'nr':
-                score = self.model(test_wave_padded).item()
+                score = self.model(test_wave_padded)
             else:
                 if ref_wave is None: raise ValueError("ref_path must be provided.")
                 ref_wave_padded = self.preprocess_tensor(ref_wave, ref_sr)
                 test_emb = self.model(test_wave_padded)
                 ref_emb = self.model(ref_wave_padded)
-                score = torch.cdist(test_emb, ref_emb).item()
-        return score
+                score = torch.cdist(test_emb, ref_emb)
+        return score.item() if score.numel() == 1 else score
 
     def predict(self, test_path, ref_path=None):
         """Makes predictions on audio files."""
