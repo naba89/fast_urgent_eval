@@ -1135,6 +1135,9 @@ class NISQA_DIM_MOS(nn.Module):
         """
         x: (batch_size, n_samples)
         """
+        if len(inf.shape) == 1:
+            inf = inf[None]
+
         mel_spec = get_librosa_melspec(
             y=inf,
             sr=fs,
